@@ -4,6 +4,7 @@ public class ParticipantDto {
     private String name;
     private String order;
     private double amount;
+    private double contribution;
 
     public ParticipantDto() {}
 
@@ -11,6 +12,7 @@ public class ParticipantDto {
         this.name = name;
         this.order = order;
         this.amount = amount;
+        this.contribution = 0;
     }
 
     public String getName() { return name; }
@@ -21,4 +23,7 @@ public class ParticipantDto {
 
     public double getAmount() { return amount; }
     public void setAmount(double amount) { this.amount = amount; }
+
+    public double getContribution() { return contribution; }
+    public void setContribution(double contribution) { this.contribution = contribution; }
 }
