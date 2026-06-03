@@ -76,10 +76,11 @@ export default function App() {
           const old = oldParticipants.find((op) => op.name === p.name);
           return old ? { ...old, name: p.name } : p;
         });
+        const oldShared = oldEvent ? (oldEvent.sharedItems || []) : [];
         const idx = prev.findIndex((e) => e.id === existingId);
         const next = prev.map((e) =>
           e.id === existingId
-            ? { ...e, title: data.title, organizerName: data.organizerName, participants: merged, splitRequest: null, result: null }
+            ? { ...e, title: data.title, organizerName: data.organizerName, participants: merged, sharedItems: oldShared, splitRequest: null, result: null }
             : e
         );
         if (idx > 0) {
@@ -208,6 +209,7 @@ export default function App() {
         title: activeEvent.title,
         organizerName: activeEvent.organizerName,
         participants: activeEvent.participants,
+        sharedItems: activeEvent.sharedItems || [],
       }
     : null;
 

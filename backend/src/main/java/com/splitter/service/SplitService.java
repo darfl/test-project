@@ -4,38 +4,90 @@ import com.splitter.dto.*;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class SplitService {
 
     public SplitResponse calculate(SplitRequest request) {
         List<ParticipantDto> participants = request.getParticipants();
+        List<SharedItemDto> sharedItems = request.getSharedItems() != null ? request.getSharedItems() : List.of();
         String organizerName = request.getOrganizerName();
+        int n = participants.size();
+        if (n == 0) {
+            return new SplitResponse(0, 0, List.of(), List.of());
+        }
 
-        double total = participants.stream()
+        // Personal orders total
+        double personalTotal = participants.stream()
                 .mapToDouble(ParticipantDto::getAmount)
                 .sum();
 
-        int count = participants.size();
-        double average = count > 0 ? total / count : 0;
+        // Shared items total
+        double sharedTotal = sharedItems.stream()
+                .mapToDouble(SharedItemDto::getAmount)
+                .sum();
+
+        double total = personalTotal + sharedTotal;
+        double sharedPerPerson = n > 0 ? sharedTotal / n : 0;
+        double average = n > 0 ? total / n : 0;
         double roundedAverage = Math.round(average * 100.0) / 100.0;
 
-        // Debts: everyone who is NOT the organizer transfers their amount to the organizer
-        List<DebtDto> debts = new ArrayList<>();
+        // Build contributions map: personal contribution + sum of shared items they paid for
+        Map<String, Double> contributions = new HashMap<>();
         for (ParticipantDto p : participants) {
-            if (!p.getName().equals(organizerName)) {
-                double roundedAmount = Math.round(p.getAmount() * 100.0) / 100.0;
-                debts.add(new DebtDto(p.getName(), organizerName, roundedAmount));
+            double contrib = p.getContribution();
+            contributions.put(p.getName(), contrib);
+        }
+
+        // Add shared item amounts to the payer's contribution
+        for (SharedItemDto s : sharedItems) {
+            if (s.getPaidBy() != null && !s.getPaidBy().isEmpty()) {
+                contributions.merge(s.getPaidBy(), s.getAmount(), Double::sum);
             }
         }
 
-        // Pressure data: for each participant
+        // Build effective amounts per participant
+        Map<String, Double> effectiveAmounts = new HashMap<>();
+        for (ParticipantDto p : participants) {
+            double personal = p.getAmount();
+            effectiveAmounts.put(p.getName(), personal + sharedPerPerson);
+        }
+
+        // Net balance per person (positive = owes, negative = owed)
+        Map<String, Double> balance = new HashMap<>();
+        for (ParticipantDto p : participants) {
+            double effective = effectiveAmounts.get(p.getName());
+            double contrib = contributions.getOrDefault(p.getName(), 0.0);
+            double net = Math.round((effective - contrib) * 100.0) / 100.0;
+            balance.put(p.getName(), net);
+        }
+
+        // Debt settlement:
+        // Each non-organizer owes effectiveAmount to organizer, minus their contributions.
+        // If contributor overpaid (net negative), organizer owes them back.
+        List<DebtDto> debts = new ArrayList<>();
+        for (ParticipantDto p : participants) {
+            String name = p.getName();
+            if (!name.equals(organizerName)) {
+                double netDebt = Math.round((effectiveAmounts.get(name) - contributions.getOrDefault(name, 0.0)) * 100.0) / 100.0;
+                if (netDebt > 0) {
+                    debts.add(new DebtDto(name, organizerName, netDebt));
+                } else if (netDebt < 0) {
+                    debts.add(new DebtDto(organizerName, name, -netDebt));
+                }
+            }
+        }
+
+        // Pressure data (based on effective amounts)
         List<PressureDto> pressureData = new ArrayList<>();
         for (ParticipantDto p : participants) {
+            double effective = effectiveAmounts.get(p.getName());
             double deviationPercent = 0;
             if (average > 0) {
-                deviationPercent = Math.round(((p.getAmount() - average) / average) * 100.0);
+                deviationPercent = Math.round(((effective - average) / average) * 100.0);
             }
             int deviation = (int) deviationPercent;
 
