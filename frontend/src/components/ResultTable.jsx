@@ -125,7 +125,7 @@ export default function ResultTable({ result, companyData, participants, onBack 
                           checked={isPaid}
                           onChange={() => togglePaid(row.name)}
                         />
-                        Я заплатил
+                        Оплачено
                       </label>
                     )}
                   </td>

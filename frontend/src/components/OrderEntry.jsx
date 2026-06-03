@@ -1,12 +1,27 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 
-export default function OrderEntry({ companyData, onBack, onSplit }) {
+export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUpdateEvent }) {
   const [participants, setParticipants] = useState(() =>
     companyData.participants.map((p) => ({ ...p }))
   );
   const [organizerName, setOrganizerName] = useState(companyData.organizerName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Sync data back to parent event whenever it changes
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (onUpdateEvent && eventId) {
+      onUpdateEvent(eventId, {
+        participants: participants.map((p) => ({ ...p })),
+        organizerName,
+      });
+    }
+  }, [participants, organizerName, onUpdateEvent, eventId]);
 
   const MAX_PARTICIPANTS = 8;
   const MIN_PARTICIPANTS = 2;
@@ -62,7 +77,6 @@ export default function OrderEntry({ companyData, onBack, onSplit }) {
   };
 
   const handleSplit = async () => {
-    // Validation
     setError('');
 
     const filled = participants.filter((p) => p.amount > 0);
@@ -71,7 +85,6 @@ export default function OrderEntry({ companyData, onBack, onSplit }) {
       return;
     }
 
-    // Ensure organizer exists in participants
     const orgExists = participants.some((p) => p.name === organizerName);
     if (!orgExists) {
       setError('Организатор должен быть среди участников');

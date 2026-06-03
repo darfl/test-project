@@ -1,21 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const NAMES = [
   'Человек 1', 'Человек 2', 'Человек 3', 'Человек 4',
   'Человек 5', 'Человек 6', 'Человек 7', 'Человек 8',
 ];
 
-export default function CreateCompany({ onNext }) {
+export default function CreateCompany({ onNext, prefill }) {
   const [title, setTitle] = useState('');
   const [count, setCount] = useState(2);
   const [organizer, setOrganizer] = useState(NAMES[0]);
+
+  // Pre-fill from existing event when going back
+  useEffect(() => {
+    if (prefill) {
+      setTitle(prefill.title || '');
+      if (prefill.count >= 2 && prefill.count <= 8) {
+        setCount(prefill.count);
+      }
+      if (prefill.organizerName) {
+        setOrganizer(prefill.organizerName);
+      }
+    }
+  }, [prefill]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     const selectedNames = NAMES.slice(0, count);
 
-    // If organizer is not in the selected range, default to first
     const finalOrganizer = selectedNames.includes(organizer)
       ? organizer
       : selectedNames[0];
@@ -26,11 +38,14 @@ export default function CreateCompany({ onNext }) {
       amount: 0,
     }));
 
-    onNext({
-      title: title.trim() || 'Ужин',
-      organizerName: finalOrganizer,
-      participants,
-    });
+    onNext(
+      {
+        title: title.trim() || 'Ужин',
+        organizerName: finalOrganizer,
+        participants,
+      },
+      prefill?.id || null
+    );
   };
 
   const countOptions = [2, 3, 4, 5, 6, 7, 8];
@@ -76,7 +91,7 @@ export default function CreateCompany({ onNext }) {
       </div>
 
       <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-        Создать компанию
+        {prefill ? 'Сохранить и перейти к заказам' : 'Создать компанию'}
       </button>
     </form>
   );
