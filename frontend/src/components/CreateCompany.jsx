@@ -102,18 +102,18 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
       </div>
 
       <div className="bottom-actions">
+        <button type="submit" className="btn btn-primary">
+          {isEditing ? 'Сохранить изменения и перейти к заказам' : 'Создать компанию'}
+        </button>
         {isEditing && onBackToOrders && (
           <button
             type="button"
             className="btn btn-secondary"
             onClick={onBackToOrders}
           >
-            ← Вернуться к заказам
+            Вернуться к заказам →
           </button>
         )}
-        <button type="submit" className="btn btn-primary">
-          {isEditing ? 'Сохранить и перейти к заказам' : 'Создать компанию'}
-        </button>
       </div>
     </form>
   );
