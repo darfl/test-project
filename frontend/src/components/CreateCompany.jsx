@@ -63,7 +63,7 @@ export default function CreateCompany({ onNext, prefill }) {
         <label>Название компании (опционально)</label>
         <input
           type="text"
-          placeholder="Например: Ужин у Паши"
+          placeholder="Например: Ужин у Ильи"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
