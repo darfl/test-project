@@ -10,7 +10,7 @@ export default function CreateCompany({ onNext, prefill }) {
   const [count, setCount] = useState(2);
   const [organizer, setOrganizer] = useState(NAMES[0]);
 
-  // Pre-fill from existing event when going back
+  // Pre-fill from existing event when going back, or reset for new event
   useEffect(() => {
     if (prefill) {
       setTitle(prefill.title || '');
@@ -20,6 +20,10 @@ export default function CreateCompany({ onNext, prefill }) {
       if (prefill.organizerName) {
         setOrganizer(prefill.organizerName);
       }
+    } else {
+      setTitle('');
+      setCount(2);
+      setOrganizer(NAMES[0]);
     }
   }, [prefill]);
 

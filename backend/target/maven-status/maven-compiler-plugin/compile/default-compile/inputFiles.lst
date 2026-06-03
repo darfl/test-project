@@ -1,5 +1,6 @@
 /Users/Dianchik/IdeaProjects/test-project/backend/src/main/java/com/splitter/service/SplitService.java
 /Users/Dianchik/IdeaProjects/test-project/backend/src/main/java/com/splitter/dto/ParticipantDto.java
+/Users/Dianchik/IdeaProjects/test-project/backend/src/main/java/com/splitter/config/CorsConfig.java
 /Users/Dianchik/IdeaProjects/test-project/backend/src/main/java/com/splitter/SplitterApplication.java
 /Users/Dianchik/IdeaProjects/test-project/backend/src/main/java/com/splitter/dto/SplitRequest.java
 /Users/Dianchik/IdeaProjects/test-project/backend/src/main/java/com/splitter/dto/DebtDto.java

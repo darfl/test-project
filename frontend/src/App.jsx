@@ -179,7 +179,7 @@ export default function App() {
           <div className="sidebar-header">
             <h3>📋 События</h3>
             <button className="btn btn-add btn-new-event" onClick={handleNewCompany}>
-              + Создать ещё команду
+              + Создать новое событие
             </button>
           </div>
           {events.length === 0 && (
