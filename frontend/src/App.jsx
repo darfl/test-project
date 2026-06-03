@@ -66,40 +66,59 @@ export default function App() {
     );
   }, [activeEventId]);
 
-  // Create or update company → go to orders
+  // Create or update company → go to orders (preserve existing orders)
   const handleCreate = useCallback((data, existingId) => {
-    if (existingId) {
-      updateEvent(existingId, {
-        title: data.title,
-        organizerName: data.organizerName,
-        participants: data.participants.map((p) => ({ ...p })),
-        splitRequest: null,
-        result: null,
-      });
-      setEvents((prev) => {
+    setEvents((prev) => {
+      if (existingId) {
+        const oldEvent = prev.find((e) => e.id === existingId);
+        const oldParticipants = oldEvent ? oldEvent.participants : [];
+        const merged = data.participants.map((p) => {
+          const old = oldParticipants.find((op) => op.name === p.name);
+          return old ? { ...old, name: p.name } : p;
+        });
         const idx = prev.findIndex((e) => e.id === existingId);
-        if (idx <= 0) return prev;
-        const next = [...prev];
-        const [item] = next.splice(idx, 1);
-        next.unshift(item);
+        const next = prev.map((e) =>
+          e.id === existingId
+            ? { ...e, title: data.title, organizerName: data.organizerName, participants: merged, splitRequest: null, result: null }
+            : e
+        );
+        if (idx > 0) {
+          const [item] = next.splice(idx, 1);
+          next.unshift(item);
+        }
         return next;
+      } else {
+        const newEvent = {
+          id: generateId(),
+          title: data.title,
+          organizerName: data.organizerName,
+          participants: data.participants.map((p) => ({ ...p })),
+          splitRequest: null,
+          result: null,
+          paidDebtors: [],
+        };
+        return [newEvent, ...prev];
+      }
+    });
+    if (!existingId) {
+      // For new event, set activeEventId to the first (newest) event
+      setActiveEventId((prevEvents) => {
+        // We need to read the id that was just generated
+        // Use a callback approach — but we can't access the new id here easily.
+        // Instead, after setEvents, we infer it.
+        return null; // will be set by the effect below
       });
-    } else {
-      const newEvent = {
-        id: generateId(),
-        title: data.title,
-        organizerName: data.organizerName,
-        participants: data.participants.map((p) => ({ ...p })),
-        splitRequest: null,
-        result: null,
-        paidDebtors: [],
-      };
-      setEvents((prev) => [newEvent, ...prev]);
-      setActiveEventId(newEvent.id);
     }
     setError('');
     setScreen(SCREENS.ORDERS);
-  }, [updateEvent]);
+  }, []);
+
+  // After handleCreate for new events, set activeEventId
+  useEffect(() => {
+    if (screen === SCREENS.ORDERS && !activeEventId && events.length > 0) {
+      setActiveEventId(events[0].id);
+    }
+  }, [screen, events, activeEventId]);
 
   // Split → go to results
   const handleSplit = useCallback(async (requestData) => {
@@ -130,7 +149,13 @@ export default function App() {
     setError('');
   }, []);
 
-  // "Создать ещё команду" — go to blank create form
+  // Back to orders from create screen (skip save)
+  const handleBackToOrdersFromCreate = useCallback(() => {
+    setScreen(SCREENS.ORDERS);
+    setError('');
+  }, []);
+
+  // "Создать новое событие" — go to blank create form
   const handleNewCompany = useCallback(() => {
     setActiveEventId(null);
     setScreen(SCREENS.CREATE);
@@ -174,6 +199,7 @@ export default function App() {
         title: activeEvent.title,
         organizerName: activeEvent.organizerName,
         count: activeEvent.participants.length,
+        existingParticipants: activeEvent.participants,
       }
     : null;
 
@@ -257,6 +283,7 @@ export default function App() {
             onNext={handleCreate}
             prefill={prefillData}
             onNewCompany={handleNewCompany}
+            onBackToOrders={handleBackToOrdersFromCreate}
             events={events}
             activeEventId={activeEventId}
           />

@@ -5,7 +5,7 @@ const NAMES = [
   'Человек 5', 'Человек 6', 'Человек 7', 'Человек 8',
 ];
 
-export default function CreateCompany({ onNext, prefill }) {
+export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
   const [title, setTitle] = useState('');
   const [count, setCount] = useState(2);
   const [organizer, setOrganizer] = useState(NAMES[0]);
@@ -27,6 +27,8 @@ export default function CreateCompany({ onNext, prefill }) {
     }
   }, [prefill]);
 
+  const isEditing = !!prefill;
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -36,11 +38,16 @@ export default function CreateCompany({ onNext, prefill }) {
       ? organizer
       : selectedNames[0];
 
-    const participants = selectedNames.map((name) => ({
-      name,
-      order: '',
-      amount: 0,
-    }));
+    // Build participants: preserve existing orders/amounts when editing
+    const existingParticipants = prefill?.existingParticipants || [];
+    const participants = selectedNames.map((name) => {
+      const existing = existingParticipants.find((p) => p.name === name);
+      return {
+        name,
+        order: existing ? existing.order : '',
+        amount: existing ? existing.amount : 0,
+      };
+    });
 
     onNext(
       {
@@ -57,7 +64,7 @@ export default function CreateCompany({ onNext, prefill }) {
 
   return (
     <form className="create-company" onSubmit={handleSubmit}>
-      <h2>🎉 Создание компании</h2>
+      <h2>{isEditing ? '✏️ Редактирование компании' : '🎉 Создание компании'}</h2>
 
       <div className="form-group">
         <label>Название компании (опционально)</label>
@@ -94,9 +101,20 @@ export default function CreateCompany({ onNext, prefill }) {
         </select>
       </div>
 
-      <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-        {prefill ? 'Сохранить и перейти к заказам' : 'Создать компанию'}
-      </button>
+      <div className="bottom-actions">
+        {isEditing && onBackToOrders && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onBackToOrders}
+          >
+            ← Вернуться к заказам
+          </button>
+        )}
+        <button type="submit" className="btn btn-primary">
+          {isEditing ? 'Сохранить и перейти к заказам' : 'Создать компанию'}
+        </button>
+      </div>
     </form>
   );
 }
