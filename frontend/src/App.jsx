@@ -52,10 +52,23 @@ export default function App() {
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   }, []);
 
+  // Toggle paid status for a debtor in active event
+  const handleTogglePaid = useCallback((name) => {
+    setEvents((prev) =>
+      prev.map((e) => {
+        if (e.id !== activeEventId) return e;
+        const paid = e.paidDebtors || [];
+        const newPaid = paid.includes(name)
+          ? paid.filter((n) => n !== name)
+          : [...paid, name];
+        return { ...e, paidDebtors: newPaid };
+      })
+    );
+  }, [activeEventId]);
+
   // Create or update company → go to orders
   const handleCreate = useCallback((data, existingId) => {
     if (existingId) {
-      // Update existing event
       updateEvent(existingId, {
         title: data.title,
         organizerName: data.organizerName,
@@ -63,7 +76,6 @@ export default function App() {
         splitRequest: null,
         result: null,
       });
-      // Keep it at top: move to front of array
       setEvents((prev) => {
         const idx = prev.findIndex((e) => e.id === existingId);
         if (idx <= 0) return prev;
@@ -73,7 +85,6 @@ export default function App() {
         return next;
       });
     } else {
-      // New event
       const newEvent = {
         id: generateId(),
         title: data.title,
@@ -81,6 +92,7 @@ export default function App() {
         participants: data.participants.map((p) => ({ ...p })),
         splitRequest: null,
         result: null,
+        paidDebtors: [],
       };
       setEvents((prev) => [newEvent, ...prev]);
       setActiveEventId(newEvent.id);
@@ -97,7 +109,7 @@ export default function App() {
       setEvents((prev) =>
         prev.map((e) =>
           e.id === activeEventId
-            ? { ...e, splitRequest: requestData, result: res }
+            ? { ...e, splitRequest: requestData, result: res, paidDebtors: e.paidDebtors || [] }
             : e
         )
       );
@@ -116,7 +128,6 @@ export default function App() {
   const handleBackToCreate = useCallback(() => {
     setScreen(SCREENS.CREATE);
     setError('');
-    // activeEventId stays — form will be pre-filled from activeEvent
   }, []);
 
   // "Создать ещё команду" — go to blank create form
@@ -147,6 +158,15 @@ export default function App() {
     }
   }, [activeEventId]);
 
+  // Compute if event is fully paid (all debtors checked)
+  const isEventFullyPaid = useCallback((event) => {
+    if (!event.result || !event.splitRequest) return false;
+    const debts = event.result.debts || [];
+    const paid = event.paidDebtors || [];
+    if (debts.length === 0) return false;
+    return debts.every((d) => paid.includes(d.debtor));
+  }, []);
+
   // Prefill data for CreateCompany form
   const prefillData = screen === SCREENS.CREATE && activeEvent
     ? {
@@ -157,7 +177,6 @@ export default function App() {
       }
     : null;
 
-  // Company data for OrderEntry
   const orderCompanyData = activeEvent
     ? {
         title: activeEvent.title,
@@ -168,12 +187,12 @@ export default function App() {
 
   const resultData = activeEvent?.result || null;
   const splitRequest = activeEvent?.splitRequest || null;
+  const paidDebtors = activeEvent?.paidDebtors || [];
 
   const showSidebar = screen === SCREENS.CREATE;
 
   return (
     <div className={`app-layout ${showSidebar ? '' : 'no-sidebar'}`}>
-      {/* Sidebar — only on CREATE screen */}
       {showSidebar && (
         <aside className="sidebar">
           <div className="sidebar-header">
@@ -186,38 +205,45 @@ export default function App() {
             <p className="sidebar-empty">Пока нет событий</p>
           )}
           <ul className="sidebar-list">
-            {events.map((event) => (
-              <li
-                key={event.id}
-                className={`sidebar-item ${event.id === activeEventId ? 'active' : ''}`}
-              >
-                <button
-                  className="sidebar-item-btn"
-                  onClick={() => handleSelectEvent(event)}
-                  title={`Открыть "${event.title}"`}
+            {events.map((event) => {
+              const fullyPaid = isEventFullyPaid(event);
+              return (
+                <li
+                  key={event.id}
+                  className={`sidebar-item ${event.id === activeEventId ? 'active' : ''}`}
                 >
-                  <span className="sidebar-item-title">{event.title}</span>
-                  <span className="sidebar-item-meta">
-                    {event.participants.length} чел. — {event.organizerName}
-                  </span>
-                </button>
-                <button
-                  className="sidebar-item-delete"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteEvent(event.id);
-                  }}
-                  title="Удалить событие"
-                >
-                  ✕
-                </button>
-              </li>
-            ))}
+                  <button
+                    className="sidebar-item-btn"
+                    onClick={() => handleSelectEvent(event)}
+                    title={`Открыть "${event.title}"`}
+                  >
+                    <span className="sidebar-item-title">
+                      {event.title}
+                      {fullyPaid && (
+                        <span style={{ marginLeft: '8px', color: '#4ade80', fontSize: '0.85rem' }}>✅</span>
+                      )}
+                    </span>
+                    <span className="sidebar-item-meta">
+                      {event.participants.length} чел. — {event.organizerName}
+                    </span>
+                  </button>
+                  <button
+                    className="sidebar-item-delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteEvent(event.id);
+                    }}
+                    title="Удалить событие"
+                  >
+                    ✕
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </aside>
       )}
 
-      {/* Main content */}
       <main className="main-content">
         <header className="app-header">
           <h1>💸 Сплиттер счетов</h1>
@@ -251,6 +277,8 @@ export default function App() {
             result={resultData}
             companyData={{ title: activeEvent.title, organizerName: activeEvent.organizerName }}
             participants={splitRequest.participants}
+            paidDebtors={paidDebtors}
+            onTogglePaid={handleTogglePaid}
             onBack={handleBackToOrders}
           />
         )}

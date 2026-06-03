@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 
-export default function ResultTable({ result, companyData, participants, onBack }) {
+export default function ResultTable({ result, companyData, participants, paidDebtors, onTogglePaid, onBack }) {
   const { total, debts } = result;
   const organizerName = companyData.organizerName;
   const title = companyData.title;
 
-  const [paidDebtors, setPaidDebtors] = useState(new Set());
+  const paidSet = useMemo(() => new Set(paidDebtors || []), [paidDebtors]);
 
   const tableData = useMemo(() => {
     return participants.map((p) => {
@@ -22,18 +22,6 @@ export default function ResultTable({ result, companyData, participants, onBack 
       };
     });
   }, [participants, debts]);
-
-  const togglePaid = (name) => {
-    setPaidDebtors((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else {
-        next.add(name);
-      }
-      return next;
-    });
-  };
 
   const handleCopyReminder = async () => {
     const lines = [];
@@ -79,7 +67,7 @@ export default function ResultTable({ result, companyData, participants, onBack 
           </thead>
           <tbody>
             {tableData.map((row) => {
-              const isPaid = paidDebtors.has(row.name);
+              const isPaid = paidSet.has(row.name);
               const isOrganizer = row.name === organizerName;
 
               return (
@@ -96,7 +84,7 @@ export default function ResultTable({ result, companyData, participants, onBack 
                         <input
                           type="checkbox"
                           checked={isPaid}
-                          onChange={() => togglePaid(row.name)}
+                          onChange={() => onTogglePaid(row.name)}
                         />
                         Оплачено
                       </label>
