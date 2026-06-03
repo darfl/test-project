@@ -221,7 +221,7 @@ export default function App() {
       <main className="main-content">
         <header className="app-header">
           <h1>💸 Сплиттер счетов</h1>
-          <p>С социальным давлением™</p>
+          <p>Для особых событий</p>
         </header>
 
         {error && <div className="error-message">{error}</div>}
