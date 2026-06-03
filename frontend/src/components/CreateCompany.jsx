@@ -29,6 +29,13 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
 
   const isEditing = !!prefill;
 
+  // Check if any changes were made vs original prefill
+  const hasChanges = isEditing
+    ? title !== (prefill.title || '') ||
+      count !== prefill.count ||
+      organizer !== prefill.organizerName
+    : true; // always enabled for new company
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -102,7 +109,7 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
       </div>
 
       <div className="bottom-actions">
-        <button type="submit" className="btn btn-primary">
+        <button type="submit" className="btn btn-primary" disabled={isEditing && !hasChanges}>
           {isEditing ? 'Сохранить изменения и перейти к заказам' : 'Создать компанию'}
         </button>
         {isEditing && onBackToOrders && (
