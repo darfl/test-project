@@ -379,6 +379,29 @@ body {
   transition: border-color 0.2s;
 }
 
+.participant-row .payee-select {
+  width: 130px;
+  min-width: 120px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.participant-row .payee-select:focus {
+  border-color: #e94560;
+}
+
+.participant-row .payee-select option {
+  background: #1a1a2e;
+  color: #fff;
+}
+
 .participant-row .amount-input:focus {
   border-color: #e94560;
 }

@@ -277,7 +277,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
               placeholder="Сумма"
             />
             <select
-              className="form-group"
+              className="payee-select"
               value={s.paidBy || ''}
               onChange={(e) => {
                 setSharedItems((prev) => {
@@ -285,15 +285,6 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                   next[i] = { ...next[i], paidBy: e.target.value };
                   return next;
                 });
-              }}
-              style={{
-                maxWidth: '130px',
-                padding: '8px 10px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#fff',
-                fontSize: '0.9rem',
               }}
             >
               <option value="">Кто заплатил</option>
