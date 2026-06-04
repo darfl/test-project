@@ -3,10 +3,7 @@ package com.splitter.service;
 import com.splitter.dto.*;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class SplitService {
@@ -14,92 +11,96 @@ public class SplitService {
     public SplitResponse calculate(SplitRequest request) {
         List<ParticipantDto> participants = request.getParticipants();
         List<SharedItemDto> sharedItems = request.getSharedItems() != null ? request.getSharedItems() : List.of();
-        String organizerName = request.getOrganizerName();
         int n = participants.size();
         if (n == 0) {
             return new SplitResponse(0, 0, List.of(), List.of());
         }
 
-        // Personal orders total
-        double personalTotal = participants.stream()
-                .mapToDouble(ParticipantDto::getAmount)
-                .sum();
-
-        // Shared items total
-        double sharedTotal = sharedItems.stream()
-                .mapToDouble(SharedItemDto::getAmount)
-                .sum();
-
+        String organizerName = request.getOrganizerName();
+        double personalTotal = participants.stream().mapToDouble(ParticipantDto::getAmount).sum();
+        double sharedTotal = sharedItems.stream().mapToDouble(SharedItemDto::getAmount).sum();
         double total = personalTotal + sharedTotal;
         double sharedPerPerson = n > 0 ? sharedTotal / n : 0;
         double average = n > 0 ? total / n : 0;
         double roundedAverage = Math.round(average * 100.0) / 100.0;
 
-        // Build contributions map: personal contribution + sum of shared items they paid for
-        Map<String, Double> contributions = new HashMap<>();
-        for (ParticipantDto p : participants) {
-            double contrib = p.getContribution();
-            contributions.put(p.getName(), contrib);
-        }
+        // Raw debts map: debtor -> { creditor -> amount }
+        Map<String, Map<String, Double>> rawDebts = new LinkedHashMap<>();
 
-        // Add shared item amounts to the payer's contribution
-        for (SharedItemDto s : sharedItems) {
-            if (s.getPaidBy() != null && !s.getPaidBy().isEmpty()) {
-                contributions.merge(s.getPaidBy(), s.getAmount(), Double::sum);
-            }
-        }
-
-        // Build effective amounts per participant
-        Map<String, Double> effectiveAmounts = new HashMap<>();
-        for (ParticipantDto p : participants) {
-            double personal = p.getAmount();
-            effectiveAmounts.put(p.getName(), personal + sharedPerPerson);
-        }
-
-        // Net balance per person (positive = owes, negative = owed)
-        Map<String, Double> balance = new HashMap<>();
-        for (ParticipantDto p : participants) {
-            double effective = effectiveAmounts.get(p.getName());
-            double contrib = contributions.getOrDefault(p.getName(), 0.0);
-            double net = Math.round((effective - contrib) * 100.0) / 100.0;
-            balance.put(p.getName(), net);
-        }
-
-        // Debt settlement:
-        // Each non-organizer owes effectiveAmount to organizer, minus their contributions.
-        // If contributor overpaid (net negative), organizer owes them back.
-        List<DebtDto> debts = new ArrayList<>();
+        // 1. Each person owes their personal order amount to the organizer
         for (ParticipantDto p : participants) {
             String name = p.getName();
             if (!name.equals(organizerName)) {
-                double netDebt = Math.round((effectiveAmounts.get(name) - contributions.getOrDefault(name, 0.0)) * 100.0) / 100.0;
-                if (netDebt > 0) {
-                    debts.add(new DebtDto(name, organizerName, netDebt));
-                } else if (netDebt < 0) {
-                    debts.add(new DebtDto(organizerName, name, -netDebt));
+                double amount = Math.round(p.getAmount() * 100.0) / 100.0;
+                if (amount > 0.001) {
+                    rawDebts.computeIfAbsent(name, k -> new LinkedHashMap<>())
+                            .merge(organizerName, amount, Double::sum);
                 }
             }
         }
 
-        // Pressure data (based on effective amounts)
+        // 2. Each person owes sharedPerPerson to each shared item payer (excluding the payer themselves)
+        for (SharedItemDto s : sharedItems) {
+            String payer = s.getPaidBy();
+            if (payer == null || payer.isEmpty() || sharedPerPerson < 0.001) continue;
+            double share = Math.round(sharedPerPerson * 100.0) / 100.0;
+            for (ParticipantDto p : participants) {
+                String name = p.getName();
+                if (!name.equals(payer)) {
+                    rawDebts.computeIfAbsent(name, k -> new LinkedHashMap<>())
+                            .merge(payer, share, Double::sum);
+                }
+            }
+        }
+
+        // 3. Mutual cancellation: if A owes B X and B owes A Y, cancel min(X, Y)
+        for (String debtor : rawDebts.keySet()) {
+            for (String creditor : rawDebts.getOrDefault(debtor, Map.of()).keySet()) {
+                double forward = rawDebts.getOrDefault(debtor, Map.of()).getOrDefault(creditor, 0.0);
+                double backward = rawDebts.getOrDefault(creditor, Map.of()).getOrDefault(debtor, 0.0);
+                if (forward > 0.001 && backward > 0.001) {
+                    double cancel = Math.min(forward, backward);
+                    forward = Math.round((forward - cancel) * 100.0) / 100.0;
+                    backward = Math.round((backward - cancel) * 100.0) / 100.0;
+                    if (forward < 0.01) {
+                        rawDebts.get(debtor).remove(creditor);
+                    } else {
+                        rawDebts.get(debtor).put(creditor, forward);
+                    }
+                    if (backward < 0.01) {
+                        rawDebts.get(creditor).remove(debtor);
+                    } else {
+                        rawDebts.get(creditor).put(debtor, backward);
+                    }
+                }
+            }
+        }
+
+        // 4. Build final debts list
+        List<DebtDto> debts = new ArrayList<>();
+        for (String debtor : rawDebts.keySet()) {
+            Map<String, Double> creditors = rawDebts.get(debtor);
+            if (creditors == null) continue;
+            for (Map.Entry<String, Double> e : creditors.entrySet()) {
+                if (e.getValue() > 0.001) {
+                    debts.add(new DebtDto(debtor, e.getKey(), Math.round(e.getValue() * 100.0) / 100.0));
+                }
+            }
+        }
+
+        // 5. Pressure data
         List<PressureDto> pressureData = new ArrayList<>();
         for (ParticipantDto p : participants) {
-            double effective = effectiveAmounts.get(p.getName());
+            double ob = p.getAmount() + sharedPerPerson;
             double deviationPercent = 0;
             if (average > 0) {
-                deviationPercent = Math.round(((effective - average) / average) * 100.0);
+                deviationPercent = Math.round(((ob - average) / average) * 100.0);
             }
             int deviation = (int) deviationPercent;
-
             String level;
-            if (deviation > 70) {
-                level = "HIGH";
-            } else if (deviation > 30) {
-                level = "MEDIUM";
-            } else {
-                level = "LOW";
-            }
-
+            if (deviation > 70) level = "HIGH";
+            else if (deviation > 30) level = "MEDIUM";
+            else level = "LOW";
             pressureData.add(new PressureDto(p.getName(), deviation, level));
         }
 
