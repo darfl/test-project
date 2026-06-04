@@ -275,16 +275,22 @@ body {
 .btn-delete {
   background: none;
   border: none;
-  color: #ff6b6b;
-  font-size: 1.4rem;
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 1.1rem;
   cursor: pointer;
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 8px;
-  transition: background 0.15s;
+  transition: color 0.2s, background 0.15s;
   line-height: 1;
 }
 
+.participant-row:hover .btn-delete,
+.participant-block:hover .btn-delete {
+  color: rgba(255, 107, 107, 0.6);
+}
+
 .btn-delete:hover {
+  color: #ff6b6b;
   background: rgba(255, 107, 107, 0.15);
 }
 
