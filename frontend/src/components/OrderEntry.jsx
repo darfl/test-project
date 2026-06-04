@@ -2,7 +2,13 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 
 export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUpdateEvent }) {
   const [participants, setParticipants] = useState(() =>
-    companyData.participants.map((p) => ({ ...p, contribution: p.contribution || 0 }))
+    companyData.participants.map((p) => ({
+      ...p,
+      contribution: p.contribution || 0,
+      items: p.items && p.items.length > 0
+        ? p.items.map((it) => ({ name: it.name || '', amount: it.amount || 0 }))
+        : [{ name: p.order || '', amount: p.amount || 0 }], // migrate from single order
+    }))
   );
   const [sharedItems, setSharedItems] = useState(() =>
     companyData.sharedItems ? companyData.sharedItems.map((s) => ({ ...s })) : []
@@ -11,7 +17,6 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Sync data back to parent event whenever it changes
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -30,8 +35,15 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const MAX_PARTICIPANTS = 8;
   const MIN_PARTICIPANTS = 2;
 
+  // Computed totals from items
   const personalTotal = useMemo(() => {
-    return participants.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    let sum = 0;
+    participants.forEach((p) => {
+      (p.items || []).forEach((it) => {
+        sum += parseFloat(it.amount) || 0;
+      });
+    });
+    return sum;
   }, [participants]);
 
   const sharedTotal = useMemo(() => {
@@ -39,18 +51,13 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   }, [sharedItems]);
 
   const grandTotal = personalTotal + sharedTotal;
-
-  const perPerson = useMemo(() => {
-    return participants.length > 0 ? grandTotal / participants.length : 0;
-  }, [grandTotal, participants.length]);
-
   const sharedPerPerson = useMemo(() => {
     return participants.length > 0 ? sharedTotal / participants.length : 0;
   }, [sharedTotal, participants.length]);
 
+  // --- Participant handlers ---
   const handleNameChange = useCallback((index, value) => {
     setParticipants((prev) => {
-      // If this participant was the organizer, update organizerName too
       const oldName = prev[index].name;
       const next = [...prev];
       next[index] = { ...next[index], name: value };
@@ -61,30 +68,67 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
     });
   }, [organizerName]);
 
-  const handleOrderChange = useCallback((index, value) => {
+  const handleItemNameChange = useCallback((pIdx, idx, value) => {
     setParticipants((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], order: value };
+      const items = [...(next[pIdx].items || [])];
+      items[idx] = { ...items[idx], name: value };
+      next[pIdx] = { ...next[pIdx], items };
       return next;
     });
   }, []);
 
-  const handleAmountChange = useCallback((index, value) => {
+  const handleItemAmountChange = useCallback((pIdx, idx, value) => {
     setParticipants((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], amount: value === '' ? 0 : parseFloat(value) || 0 };
+      const items = [...(next[pIdx].items || [])];
+      items[idx] = { ...items[idx], amount: value === '' ? 0 : parseFloat(value) || 0 };
+      next[pIdx] = { ...next[pIdx], items };
       return next;
     });
   }, []);
 
-  const handleContributionChange = useCallback((index, value) => {
+  const handleAddItem = useCallback((pIdx) => {
     setParticipants((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], contribution: value === '' ? 0 : parseFloat(value) || 0 };
+      next[pIdx] = {
+        ...next[pIdx],
+        items: [...(next[pIdx].items || []), { name: '', amount: 0 }],
+      };
       return next;
     });
   }, []);
 
+  const handleRemoveItem = useCallback((pIdx, idx) => {
+    setParticipants((prev) => {
+      const next = [...prev];
+      const items = [...(next[pIdx].items || [])];
+      if (items.length <= 1) return prev; // keep at least one
+      items.splice(idx, 1);
+      next[pIdx] = { ...next[pIdx], items };
+      return next;
+    });
+  }, []);
+
+  const handleAddParticipant = () => {
+    if (participants.length >= MAX_PARTICIPANTS) return;
+    const newIndex = participants.length + 1;
+    setParticipants((prev) => [
+      ...prev,
+      { name: `Человек ${newIndex}`, items: [{ name: '', amount: 0 }], contribution: 0 },
+    ]);
+  };
+
+  const handleRemoveParticipant = (index) => {
+    if (participants.length <= MIN_PARTICIPANTS) return;
+    setParticipants((prev) => {
+      const next = [...prev];
+      next.splice(index, 1);
+      return next;
+    });
+  };
+
+  // --- Shared item handlers ---
   const handleSharedItemNameChange = useCallback((index, value) => {
     setSharedItems((prev) => {
       const next = [...prev];
@@ -101,24 +145,6 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
     });
   }, []);
 
-  const handleAddParticipant = () => {
-    if (participants.length >= MAX_PARTICIPANTS) return;
-    const newIndex = participants.length + 1;
-    setParticipants((prev) => [
-      ...prev,
-      { name: `Человек ${newIndex}`, order: '', amount: 0, contribution: 0 },
-    ]);
-  };
-
-  const handleRemoveParticipant = (index) => {
-    if (participants.length <= MIN_PARTICIPANTS) return;
-    setParticipants((prev) => {
-      const next = [...prev];
-      next.splice(index, 1);
-      return next;
-    });
-  };
-
   const handleAddSharedItem = () => {
     setSharedItems((prev) => [...prev, { name: '', amount: 0, paidBy: '' }]);
   };
@@ -134,7 +160,11 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const handleSplit = async () => {
     setError('');
 
-    const hasAnyAmount = participants.some((p) => parseFloat(p.amount) > 0) || sharedItems.some((s) => parseFloat(s.amount) > 0);
+    const hasAnyAmount =
+      participants.some((p) =>
+        (p.items || []).some((it) => parseFloat(it.amount) > 0)
+      ) || sharedItems.some((s) => parseFloat(s.amount) > 0);
+
     if (!hasAnyAmount) {
       setError('Должна быть хотя бы одна сумма > 0');
       return;
@@ -156,8 +186,10 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
         organizerName,
         participants: participants.map((p) => ({
           name: p.name.trim() || `Человек ${participants.indexOf(p) + 1}`,
-          order: p.order,
-          amount: parseFloat(p.amount) || 0,
+          items: (p.items || []).map((it) => ({
+            name: it.name || '',
+            amount: parseFloat(it.amount) || 0,
+          })),
           contribution: parseFloat(p.contribution) || 0,
         })),
         sharedItems: sharedItems
@@ -168,7 +200,6 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
             paidBy: s.paidBy || '',
           })),
       };
-
       onSplit(requestData);
     } catch (err) {
       setError(err.message || 'Ошибка при расчёте');
@@ -197,45 +228,73 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       {/* Personal orders */}
       <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '16px' }}>👤 Личные заказы</h3>
       <div className="participants-list">
-        {participants.map((p, i) => (
-          <div className="participant-row" key={i}>
-            <input
-              className="name-input"
-              type="text"
-              value={p.name}
-              onChange={(e) => handleNameChange(i, e.target.value)}
-              onFocus={(e) => {
-                if (e.target.value === `Человек ${i + 1}`) {
-                  e.target.select();
-                }
-              }}
-              placeholder={`Имя ${i + 1}`}
-              title="Нажмите, чтобы изменить имя"
-            />
-            <input
-              className="order-input"
-              type="text"
-              value={p.order}
-              onChange={(e) => handleOrderChange(i, e.target.value)}
-              placeholder="Что заказал"
-            />
-            <input
-              className="amount-input"
-              type="number"
-              min="0"
-              step="0.01"
-              value={p.amount === 0 ? '' : p.amount}
-              onChange={(e) => handleAmountChange(i, e.target.value)}
-              placeholder="Сумма"
-            />
-            <button
-              className="btn-delete"
-              onClick={() => handleRemoveParticipant(i)}
-              disabled={participants.length <= MIN_PARTICIPANTS}
-              title="Удалить участника"
-            >
-              ✕
-            </button>
+        {participants.map((p, pIdx) => (
+          <div className="participant-block" key={pIdx}>
+            <div className="participant-row">
+              <input
+                className="name-input"
+                type="text"
+                value={p.name}
+                onChange={(e) => handleNameChange(pIdx, e.target.value)}
+                onFocus={(e) => {
+                  if (e.target.value === `Человек ${pIdx + 1}`) {
+                    e.target.select();
+                  }
+                }}
+                placeholder={`Имя ${pIdx + 1}`}
+                title="Нажмите, чтобы изменить имя"
+              />
+              <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {(p.items || []).map((it, iIdx) => (
+                  <div key={iIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      className="order-input"
+                      type="text"
+                      value={it.name}
+                      onChange={(e) => handleItemNameChange(pIdx, iIdx, e.target.value)}
+                      placeholder="Что заказал"
+                      style={{ flex: 2 }}
+                    />
+                    <input
+                      className="amount-input"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={it.amount === 0 ? '' : it.amount}
+                      onChange={(e) => handleItemAmountChange(pIdx, iIdx, e.target.value)}
+                      placeholder="Сумма"
+                    />
+                    {(p.items || []).length > 1 && (
+                      <button
+                        type="button"
+                        className="btn-delete"
+                        onClick={() => handleRemoveItem(pIdx, iIdx)}
+                        title="Удалить позицию"
+                        style={{ fontSize: '1rem', padding: '2px 8px' }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="btn btn-add"
+                  onClick={() => handleAddItem(pIdx)}
+                  style={{ fontSize: '0.78rem', padding: '5px 10px' }}
+                >
+                  + добавить заказ
+                </button>
+              </div>
+              <button
+                className="btn-delete"
+                onClick={() => handleRemoveParticipant(pIdx)}
+                disabled={participants.length <= MIN_PARTICIPANTS}
+                title="Удалить участника"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -288,8 +347,8 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
               }}
             >
               <option value="">Кто заплатил</option>
-              {participants.map((p) => (
-                <option key={p.name} value={p.name}>{p.name}</option>
+              {participants.map((pp) => (
+                <option key={pp.name} value={pp.name}>{pp.name}</option>
               ))}
             </select>
             <button
