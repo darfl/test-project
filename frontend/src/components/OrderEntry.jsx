@@ -50,11 +50,16 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
 
   const handleNameChange = useCallback((index, value) => {
     setParticipants((prev) => {
+      // If this participant was the organizer, update organizerName too
+      const oldName = prev[index].name;
       const next = [...prev];
       next[index] = { ...next[index], name: value };
+      if (oldName === organizerName || (!oldName && organizerName === `Человек ${index + 1}`)) {
+        setOrganizerName(value || `Человек ${index + 1}`);
+      }
       return next;
     });
-  }, []);
+  }, [organizerName]);
 
   const handleOrderChange = useCallback((index, value) => {
     setParticipants((prev) => {
@@ -135,7 +140,11 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       return;
     }
 
-    const orgExists = participants.some((p) => p.name === organizerName);
+    const orgExists = participants.some((p) => {
+      const pName = (p.name || '').trim();
+      const fallback = `Человек ${participants.indexOf(p) + 1}`;
+      return organizerName === (pName || fallback);
+    });
     if (!orgExists) {
       setError('Организатор должен быть среди участников');
       return;
@@ -213,17 +222,6 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
               value={p.amount === 0 ? '' : p.amount}
               onChange={(e) => handleAmountChange(i, e.target.value)}
               placeholder="Сумма"
-            />
-            <input
-              className="amount-input"
-              type="number"
-              min="0"
-              step="0.01"
-              value={p.contribution === 0 ? '' : p.contribution}
-              onChange={(e) => handleContributionChange(i, e.target.value)}
-              placeholder="Взнос"
-              title="Сколько уже заплатил"
-              style={{ maxWidth: '90px' }}
             />
             <button
               className="btn-delete"
