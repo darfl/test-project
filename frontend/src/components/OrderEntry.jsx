@@ -323,9 +323,6 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
         <div className="stat">
           Итого: <span>{grandTotal.toFixed(2)} ₽</span>
         </div>
-        <div className="stat">
-          С человека: <span>{perPerson.toFixed(2)} ₽</span>
-        </div>
       </div>
 
       <div className="bottom-actions">
