@@ -78,7 +78,6 @@ export default function ResultTable({ result, companyData, participants, paidDeb
           <thead>
             <tr>
               <th>Участник</th>
-              <th>Заказал</th>
               <th>Сумма</th>
               <th>Должен / получает</th>
               <th></th>
@@ -111,7 +110,6 @@ export default function ResultTable({ result, companyData, participants, paidDeb
               return (
                 <tr key={row.name} className={isPaid ? 'paid' : ''}>
                   <td data-label="Участник">{row.name}</td>
-                  <td data-label="Заказал">{row.order}</td>
                   <td data-label="Сумма">{row.amount.toFixed(2)} ₽</td>
                   <td data-label="Должен / получает">{debtDisplay}</td>
                   <td data-label="">
