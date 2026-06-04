@@ -198,6 +198,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
             name: s.name || 'Общее',
             amount: parseFloat(s.amount) || 0,
             paidBy: s.paidBy || '',
+            sharedWith: s.sharedWith || [],
           })),
       };
       onSplit(requestData);
@@ -309,57 +310,136 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       </button>
 
       {/* Shared items */}
-      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Общие позиции (на всех)</h3>
+      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции</h3>
       {sharedItems.length === 0 && (
         <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '10px' }}>
-          Пицца, пиво, кальян — всё, что делится на всех
+          Пицца, пиво, кальян — всё, что делится на нескольких участников
         </p>
       )}
       <div className="participants-list">
-        {sharedItems.map((s, i) => (
-          <div className="participant-row" key={i}>
-            <input
-              className="order-input"
-              type="text"
-              value={s.name}
-              onChange={(e) => handleSharedItemNameChange(i, e.target.value)}
-              placeholder="Название"
-              style={{ flex: 2 }}
-            />
-            <input
-              className="amount-input"
-              type="number"
-              min="0"
-              step="0.01"
-              value={s.amount === 0 ? '' : s.amount}
-              onChange={(e) => handleSharedItemAmountChange(i, e.target.value)}
-              placeholder="Сумма"
-            />
-            <select
-              className="payee-select"
-              value={s.paidBy || ''}
-              onChange={(e) => {
-                setSharedItems((prev) => {
-                  const next = [...prev];
-                  next[i] = { ...next[i], paidBy: e.target.value };
-                  return next;
-                });
-              }}
-            >
-              <option value="">Кто заплатил</option>
-              {participants.map((pp) => (
-                <option key={pp.name} value={pp.name}>{pp.name}</option>
-              ))}
-            </select>
-            <button
-              className="btn-delete"
-              onClick={() => handleRemoveSharedItem(i)}
-              title="Удалить позицию"
-            >
-              ✕
-            </button>
-          </div>
-        ))}
+        {sharedItems.map((s, i) => {
+          const sharedWith = s.sharedWith || [];
+          const allSelected = participants.length > 0 && sharedWith.length === participants.length;
+          return (
+            <div className="participant-block" key={i}>
+              <div className="participant-row">
+                <input
+                  className="order-input"
+                  type="text"
+                  value={s.name}
+                  onChange={(e) => handleSharedItemNameChange(i, e.target.value)}
+                  placeholder="Название"
+                  style={{ flex: 2 }}
+                />
+                <input
+                  className="amount-input"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={s.amount === 0 ? '' : s.amount}
+                  onChange={(e) => handleSharedItemAmountChange(i, e.target.value)}
+                  placeholder="Сумма"
+                />
+                <select
+                  className="payee-select"
+                  value={s.paidBy || ''}
+                  onChange={(e) => {
+                    setSharedItems((prev) => {
+                      const next = [...prev];
+                      next[i] = { ...next[i], paidBy: e.target.value };
+                      return next;
+                    });
+                  }}
+                >
+                  <option value="">Кто заплатил</option>
+                  {participants.map((pp) => (
+                    <option key={pp.name} value={pp.name}>{pp.name}</option>
+                  ))}
+                </select>
+                <button
+                  className="btn-delete"
+                  onClick={() => handleRemoveSharedItem(i)}
+                  title="Удалить позицию"
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', paddingLeft: '8px' }}>
+                <label
+                  style={{
+                    color: allSelected ? '#4ade80' : '#888',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    background: allSelected ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${allSelected ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => {
+                      setSharedItems((prev) => {
+                        const next = [...prev];
+                        if (allSelected) {
+                          next[i] = { ...next[i], sharedWith: [] };
+                        } else {
+                          next[i] = { ...next[i], sharedWith: participants.map((pp) => pp.name) };
+                        }
+                        return next;
+                      });
+                    }}
+                    style={{ accentColor: '#4ade80' }}
+                  />
+                  Все
+                </label>
+                {participants.map((pp) => {
+                  const isChecked = sharedWith.includes(pp.name);
+                  return (
+                    <label
+                      key={pp.name}
+                      style={{
+                        color: isChecked ? '#4ade80' : '#888',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        background: isChecked ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${isChecked ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSharedItems((prev) => {
+                            const next = [...prev];
+                            const current = next[i].sharedWith || [];
+                            if (isChecked) {
+                              next[i] = { ...next[i], sharedWith: current.filter((n) => n !== pp.name) };
+                            } else {
+                              next[i] = { ...next[i], sharedWith: [...current, pp.name] };
+                            }
+                            return next;
+                          });
+                        }}
+                        style={{ accentColor: '#4ade80' }}
+                      />
+                      {pp.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <button className="btn btn-add" onClick={handleAddSharedItem}>
