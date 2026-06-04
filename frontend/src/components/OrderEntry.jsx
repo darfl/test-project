@@ -204,6 +204,11 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
               type="text"
               value={p.name}
               onChange={(e) => handleNameChange(i, e.target.value)}
+              onFocus={(e) => {
+                if (e.target.value === `Человек ${i + 1}`) {
+                  e.target.select();
+                }
+              }}
               placeholder={`Имя ${i + 1}`}
               title="Нажмите, чтобы изменить имя"
             />
