@@ -211,7 +211,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
 
   return (
     <div className="order-entry">
-      <h2>🍽️ Заказы — {companyData.title}</h2>
+      <h2>💰 Расходы компании {companyData.title}</h2>
 
       {error && <div className="error-message">{error}</div>}
 
@@ -227,7 +227,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       </div>
 
       {/* Personal orders */}
-      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '16px' }}>👤 Личные заказы</h3>
+      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '16px' }}>👤 Личные траты</h3>
       <div className="participants-list">
         {participants.map((p, pIdx) => (
           <div className="participant-block" key={pIdx}>
@@ -284,7 +284,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                   onClick={() => handleAddItem(pIdx)}
                   style={{ fontSize: '0.78rem', padding: '5px 10px' }}
                 >
-                  + добавить заказ
+                  + добавить позицию
                 </button>
               </div>
               <button
