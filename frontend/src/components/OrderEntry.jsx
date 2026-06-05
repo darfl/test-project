@@ -82,7 +82,8 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
     setParticipants((prev) => {
       const next = [...prev];
       const items = [...(next[pIdx].items || [])];
-      items[idx] = { ...items[idx], amount: value === '' ? 0 : parseFloat(value) || 0 };
+      const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
+      items[idx] = { ...items[idx], amount: num };
       next[pIdx] = { ...next[pIdx], items };
       return next;
     });
@@ -140,7 +141,8 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const handleSharedItemAmountChange = useCallback((index, value) => {
     setSharedItems((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], amount: value === '' ? 0 : parseFloat(value) || 0 };
+      const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
+      next[index] = { ...next[index], amount: num };
       return next;
     });
   }, []);
@@ -256,15 +258,19 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                       placeholder="Что заказал"
                       style={{ flex: 2 }}
                     />
-                    <input
-                      className="amount-input"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={it.amount === 0 ? '' : it.amount}
-                      onChange={(e) => handleItemAmountChange(pIdx, iIdx, e.target.value)}
-                      placeholder="Сумма"
-                    />
+                        <input
+                          className="amount-input"
+                          type="number"
+                          min="0"
+                          onKeyDown={(e) => {
+                            if (e.key === '-' || e.key === '+' || e.key === 'e') {
+                              e.preventDefault();
+                            }
+                          }}
+                          value={it.amount === 0 ? '' : it.amount}
+                          onChange={(e) => handleItemAmountChange(pIdx, iIdx, e.target.value)}
+                          placeholder="Сумма"
+                        />
                     {(p.items || []).length > 1 && (
                       <button
                         type="button"
@@ -335,7 +341,11 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                   className="amount-input"
                   type="number"
                   min="0"
-                  step="0.01"
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === '+' || e.key === 'e') {
+                      e.preventDefault();
+                    }
+                  }}
                   value={s.amount === 0 ? '' : s.amount}
                   onChange={(e) => handleSharedItemAmountChange(i, e.target.value)}
                   placeholder="Сумма"
