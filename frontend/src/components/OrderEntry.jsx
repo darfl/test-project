@@ -216,7 +216,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       {error && <div className="error-message">{error}</div>}
 
       <div className="form-group">
-        <label>💵 Кто заплатил</label>
+        <label>💵 Кто оплатил</label>
         <select value={organizerName} onChange={(e) => setOrganizerName(e.target.value)}>
           {participants.map((p, i) => (
             <option key={i} value={p.name || `Человек ${i + 1}`}>
@@ -351,7 +351,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                     });
                   }}
                 >
-                  <option value="">Кто заплатил</option>
+                  <option value="">Кто оплатил</option>
                   {participants.map((pp) => (
                     <option key={pp.name} value={pp.name}>{pp.name}</option>
                   ))}
