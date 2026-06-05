@@ -251,9 +251,9 @@ export default function App() {
                         <span style={{ marginLeft: '8px', color: '#4ade80', fontSize: '0.85rem' }}>✅</span>
                       )}
                     </span>
-                    <span className="sidebar-item-meta">
-                      {event.participants.length} чел. — {event.organizerName}
-                    </span>
+                  <span className="sidebar-item-meta">
+                    {event.participants.length} чел.
+                  </span>
                   </button>
                   <button
                     className="sidebar-item-delete"
