@@ -18,67 +18,78 @@ public class SplitService {
             return new SplitResponse(0, 0, List.of(), List.of());
         }
 
-        // Collect names
         List<String> names = new ArrayList<>();
         for (ParticipantDto p : participants) {
             names.add(p.getName() != null ? p.getName() : "");
         }
 
-        // Personal amounts from items
-        Map<String, Double> personalAmounts = new LinkedHashMap<>();
         double personalTotal = 0;
-        for (int i = 0; i < participants.size(); i++) {
-            ParticipantDto p = participants.get(i);
-            String name = names.get(i);
-            double sum = 0;
-            if (p.getItems() != null) {
-                for (OrderItemDto it : p.getItems()) {
-                    sum += it.getAmount();
-                }
-            }
-            sum = Math.round(sum * 100.0) / 100.0;
-            personalAmounts.put(name, sum);
-            personalTotal += sum;
-        }
+        double sharedTotal = 0;
 
-        // Net balance per person
+        // Net balance per person — start at 0
         Map<String, Double> balance = new LinkedHashMap<>();
         for (String name : names) {
             balance.put(name, 0.0);
         }
 
-        // 1. Personal orders: each person owes their personal total to the organizer
-        for (String name : names) {
-            if (!name.equals(organizerName)) {
-                double amt = personalAmounts.get(name);
-                balance.merge(name, amt, Double::sum);
-                balance.merge(organizerName, -amt, Double::sum);
+        // 1. Personal items — each item was bought by the participant listed under it,
+        //    and may be shared with others.
+        for (int i = 0; i < participants.size(); i++) {
+            ParticipantDto p = participants.get(i);
+            String buyer = names.get(i);
+            if (p.getItems() == null) continue;
+            for (OrderItemDto item : p.getItems()) {
+                double itemAmount = item.getAmount();
+                personalTotal += itemAmount;
+
+                // Who shares this item? If none given, just the buyer.
+                List<String> sharedWith = (item.getSharedWith() != null && !item.getSharedWith().isEmpty())
+                        ? item.getSharedWith()
+                        : List.of(buyer);
+
+                int cnt = sharedWith.size();
+                if (cnt == 0) continue;
+                double share = Math.round((itemAmount / cnt) * 100.0) / 100.0;
+
+                // Each sharer owes their share (balance +)
+                for (String name : sharedWith) {
+                    balance.merge(name, share, Double::sum);
+                }
+
+                // The organizer (who paid the bill) gets credit for the item
+                balance.merge(organizerName, -itemAmount, Double::sum);
+
+                // Rounding correction on the last sharer
+                double totalShares = Math.round(share * cnt * 100.0) / 100.0;
+                double diff = Math.round((itemAmount - totalShares) * 100.0) / 100.0;
+                if (Math.abs(diff) > 0.001 && !sharedWith.isEmpty()) {
+                    balance.merge(sharedWith.get(sharedWith.size() - 1), diff, Double::sum);
+                }
             }
         }
 
-        // 2. Shared items: split among selected participants (or all if empty)
-        double sharedTotal = 0;
+        // 2. Shared (group) items — bought by paidBy, shared among sharedWith (or all)
         for (SharedItemDto s : sharedItems) {
-            sharedTotal += s.getAmount();
+            double itemAmount = s.getAmount();
+            sharedTotal += itemAmount;
+
             List<String> sharedWith = (s.getSharedWith() != null && !s.getSharedWith().isEmpty())
                     ? s.getSharedWith()
                     : names;
 
-            int shareCount = sharedWith.size();
-            if (shareCount == 0) continue;
-            double share = Math.round((s.getAmount() / shareCount) * 100.0) / 100.0;
+            int cnt = sharedWith.size();
+            if (cnt == 0) continue;
+            double share = Math.round((itemAmount / cnt) * 100.0) / 100.0;
 
-            for (String nm : sharedWith) {
-                balance.merge(nm, share, Double::sum);
+            for (String name : sharedWith) {
+                balance.merge(name, share, Double::sum);
             }
 
-            // Contributor (who paid) gets the full amount credited
             String payer = (s.getPaidBy() != null && !s.getPaidBy().isEmpty()) ? s.getPaidBy() : organizerName;
-            balance.merge(payer, -s.getAmount(), Double::sum);
+            balance.merge(payer, -itemAmount, Double::sum);
 
-            // Handle rounding
-            double totalShares = Math.round(share * shareCount * 100.0) / 100.0;
-            double diff = Math.round((s.getAmount() - totalShares) * 100.0) / 100.0;
+            double totalShares = Math.round(share * cnt * 100.0) / 100.0;
+            double diff = Math.round((itemAmount - totalShares) * 100.0) / 100.0;
             if (Math.abs(diff) > 0.001 && !sharedWith.isEmpty()) {
                 balance.merge(sharedWith.get(sharedWith.size() - 1), diff, Double::sum);
             }
@@ -90,6 +101,7 @@ public class SplitService {
             String name = names.get(i);
             if (p.getContribution() > 0.001) {
                 balance.merge(name, -p.getContribution(), Double::sum);
+                // assume contribution was paid to organizer (or just credit the contributor)
                 balance.merge(organizerName, p.getContribution(), Double::sum);
             }
         }
@@ -103,7 +115,7 @@ public class SplitService {
         double average = n > 0 ? total / n : 0;
         double roundedAverage = Math.round(average * 100.0) / 100.0;
 
-        // Greedy settlement
+        // Greedy settlement — minimize number of transfers
         List<DebtDto> debts = new ArrayList<>();
         List<Map.Entry<String, Double>> positives = new ArrayList<>();
         List<Map.Entry<String, Double>> negatives = new ArrayList<>();
