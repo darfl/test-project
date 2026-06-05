@@ -45,8 +45,7 @@
 ### Backend (порт 8080)
 
 ```bash
-cd backend
-./mvnw spring-boot:run
+cd backend && ./mvnw spring-boot:run
 ```
 
 > Если `./mvnw` не запускается — дайте права: `chmod +x mvnw`
@@ -54,9 +53,7 @@ cd backend
 ### Frontend (порт 5173)
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm run dev
 ```
 
 Откройте http://localhost:5173 в браузере.
