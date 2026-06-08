@@ -486,6 +486,20 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
         + Добавить позицию в чек
       </button>
 
+      {inCheckShared.length > 0 && (
+        <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '8px' }}>
+          {inCheckShared.filter(s => parseFloat(s.amount) > 0).map((s, i) => {
+            const cnt = (s.sharedWith && s.sharedWith.length > 0) ? s.sharedWith.length : participants.length;
+            const per = cnt > 0 ? (parseFloat(s.amount) || 0) / cnt : 0;
+            return (
+              <span key={i} style={{ display: 'inline-block', marginRight: '16px' }}>
+                {s.name}: по {per.toFixed(2)} ₽ с чел.
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* Shared items (separate check) */}
       <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции (отдельный чек)</h3>
       {sharedItems.length === 0 && (
@@ -629,7 +643,15 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
 
       {sharedItems.length > 0 && (
         <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '8px' }}>
-          Каждый платит по {sharedPerPerson.toFixed(2)} ₽ за общие позиции
+          {sharedItems.filter(s => parseFloat(s.amount) > 0).map((s, i) => {
+            const cnt = (s.sharedWith && s.sharedWith.length > 0) ? s.sharedWith.length : participants.length;
+            const per = cnt > 0 ? (parseFloat(s.amount) || 0) / cnt : 0;
+            return (
+              <span key={i} style={{ display: 'inline-block', marginRight: '16px' }}>
+                {s.name}: по {per.toFixed(2)} ₽ с чел.
+              </span>
+            );
+          })}
         </div>
       )}
 
