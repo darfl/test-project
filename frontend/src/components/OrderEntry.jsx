@@ -138,6 +138,11 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
               type="text"
               value={c.name}
               onChange={(e) => handleCheckNameChange(cIdx, e.target.value)}
+              onFocus={(e) => {
+                if (e.target.value.startsWith('Чек ')) {
+                  e.target.select();
+                }
+              }}
               placeholder="Название чека"
               style={{ flex: 2 }}
             />
