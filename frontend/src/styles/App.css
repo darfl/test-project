@@ -678,6 +678,31 @@ body {
   margin-top: 20px;
 }
 
+/* ========== Modal ========== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  box-shadow: var(--shadow-lg);
+  min-width: 320px;
+  max-width: 420px;
+  width: 90%;
+}
+
 /* ========== Error state ========== */
 .error-message {
   background: var(--danger-light);

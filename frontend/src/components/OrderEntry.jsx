@@ -22,6 +22,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const [error, setError] = useState('');
   const [editingCheck, setEditingCheck] = useState(null);
   const [editCheckName, setEditCheckName] = useState('');
+  const [confirmDeleteCheck, setConfirmDeleteCheck] = useState(null);
 
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -58,7 +59,13 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
 
   const handleRemoveCheck = (cIdx) => {
     if (checks.length <= 1) return;
-    setChecks((prev) => { const next = [...prev]; next.splice(cIdx, 1); return next; });
+    setConfirmDeleteCheck(cIdx);
+  };
+
+  const confirmRemoveCheck = () => {
+    if (confirmDeleteCheck === null) return;
+    setChecks((prev) => { const next = [...prev]; next.splice(confirmDeleteCheck, 1); return next; });
+    setConfirmDeleteCheck(null);
   };
 
   // --- Item handlers within a check ---
@@ -242,6 +249,30 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       <button className="btn btn-add" onClick={handleAddCheck}>
         + Добавить чек
       </button>
+
+      {confirmDeleteCheck !== null && (
+        <div className="modal-overlay" onClick={() => setConfirmDeleteCheck(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <p style={{ marginBottom: '20px', fontSize: '1rem', color: 'var(--text-primary)' }}>Удалить чек?</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setConfirmDeleteCheck(null)}
+                style={{ fontSize: '0.85rem', padding: '8px 18px' }}
+              >
+                Отмена
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={confirmRemoveCheck}
+                style={{ fontSize: '0.85rem', padding: '8px 18px', background: 'var(--danger)' }}
+              >
+                🗑️ Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="stats-bar">
         <div className="stat">Итого: <span>{grandTotal.toFixed(2)} ₽</span></div>
