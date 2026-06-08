@@ -127,7 +127,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
 
   return (
     <div className="order-entry">
-      <h2>💰 Расходы компании {companyData.title}</h2>
+      <h2>💰 Расходы компании «{companyData.title}»</h2>
       {error && <div className="error-message">{error}</div>}
 
       {checks.map((c, cIdx) => (
