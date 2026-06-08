@@ -68,7 +68,32 @@ public class SplitService {
             }
         }
 
-        // 2. Shared (group) items — bought by paidBy, shared among sharedWith (or all)
+        // 2. In-check shared items — paid by organizer, split among selected participants
+        List<SharedItemDto> inCheckShared = request.getInCheckShared() != null ? request.getInCheckShared() : List.of();
+        for (SharedItemDto s : inCheckShared) {
+            double itemAmount = s.getAmount();
+            List<String> sharedWith = (s.getSharedWith() != null && !s.getSharedWith().isEmpty())
+                    ? s.getSharedWith()
+                    : names;
+            int cnt = sharedWith.size();
+            if (cnt == 0) continue;
+            double share = Math.round((itemAmount / cnt) * 100.0) / 100.0;
+            for (String name : sharedWith) {
+                balance.merge(name, share, Double::sum);
+            }
+            // Organizer paid this item
+            balance.merge(organizerName, -itemAmount, Double::sum);
+            double totalShares = Math.round(share * cnt * 100.0) / 100.0;
+            double diff = Math.round((itemAmount - totalShares) * 100.0) / 100.0;
+            if (Math.abs(diff) > 0.001 && !sharedWith.isEmpty()) {
+                balance.merge(sharedWith.get(sharedWith.size() - 1), diff, Double::sum);
+            }
+        }
+
+        // 2a. Count inCheckShared in sharedTotal for the overall total
+        sharedTotal += inCheckShared.stream().mapToDouble(SharedItemDto::getAmount).sum();
+
+        // 3. Shared (group) items — bought by paidBy, shared among sharedWith (or all)
         for (SharedItemDto s : sharedItems) {
             double itemAmount = s.getAmount();
             sharedTotal += itemAmount;
