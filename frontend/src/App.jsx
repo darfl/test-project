@@ -39,20 +39,16 @@ export default function App() {
   const [screen, setScreen] = useState(SCREENS.CREATE);
   const [error, setError] = useState('');
 
-  // Persist events to localStorage on every change
   useEffect(() => {
     saveEvents(events);
   }, [events]);
 
-  // Find active event
   const activeEvent = events.find((e) => e.id === activeEventId) || null;
 
-  // Update an event in the list
   const updateEvent = useCallback((id, patch) => {
     setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   }, []);
 
-  // Toggle paid status for a debtor in active event
   const handleTogglePaid = useCallback((name) => {
     setEvents((prev) =>
       prev.map((e) => {
@@ -66,21 +62,21 @@ export default function App() {
     );
   }, [activeEventId]);
 
-  // Create or update company → go to orders (preserve existing orders)
   const handleCreate = useCallback((data, existingId) => {
     setEvents((prev) => {
       if (existingId) {
         const oldEvent = prev.find((e) => e.id === existingId);
-        const oldParticipants = oldEvent ? oldEvent.participants : [];
         const merged = data.participants.map((p) => {
-          const old = oldParticipants.find((op) => op.name === p.name);
+          const old = (oldEvent && oldEvent.participants)
+            ? oldEvent.participants.find((op) => op.name === p.name)
+            : null;
           return old ? { ...old, name: p.name } : p;
         });
-        const oldShared = oldEvent ? (oldEvent.sharedItems || []) : [];
+        const oldChecks = oldEvent ? (oldEvent.checks || []) : [];
         const idx = prev.findIndex((e) => e.id === existingId);
         const next = prev.map((e) =>
           e.id === existingId
-            ? { ...e, title: data.title, organizerName: data.organizerName, participants: merged, sharedItems: oldShared, splitRequest: null, result: null }
+            ? { ...e, title: data.title, participants: merged, checks: oldChecks, splitRequest: null, result: null }
             : e
         );
         if (idx > 0) {
@@ -92,8 +88,8 @@ export default function App() {
         const newEvent = {
           id: generateId(),
           title: data.title,
-          organizerName: data.organizerName,
           participants: data.participants.map((p) => ({ ...p })),
+          checks: [],
           splitRequest: null,
           result: null,
           paidDebtors: [],
@@ -102,26 +98,18 @@ export default function App() {
       }
     });
     if (!existingId) {
-      // For new event, set activeEventId to the first (newest) event
-      setActiveEventId((prevEvents) => {
-        // We need to read the id that was just generated
-        // Use a callback approach — but we can't access the new id here easily.
-        // Instead, after setEvents, we infer it.
-        return null; // will be set by the effect below
-      });
+      setActiveEventId(null);
     }
     setError('');
     setScreen(SCREENS.ORDERS);
   }, []);
 
-  // After handleCreate for new events, set activeEventId
   useEffect(() => {
     if (screen === SCREENS.ORDERS && !activeEventId && events.length > 0) {
       setActiveEventId(events[0].id);
     }
   }, [screen, events, activeEventId]);
 
-  // Split → go to results
   const handleSplit = useCallback(async (requestData) => {
     setError('');
     try {
@@ -139,31 +127,26 @@ export default function App() {
     }
   }, [activeEventId]);
 
-  // Back to orders from results
   const handleBackToOrders = useCallback(() => {
     setScreen(SCREENS.ORDERS);
   }, []);
 
-  // Back to create from orders — keep active event, form pre-filled
   const handleBackToCreate = useCallback(() => {
     setScreen(SCREENS.CREATE);
     setError('');
   }, []);
 
-  // Back to orders from create screen (skip save)
   const handleBackToOrdersFromCreate = useCallback(() => {
     setScreen(SCREENS.ORDERS);
     setError('');
   }, []);
 
-  // "Создать новое событие" — go to blank create form
   const handleNewCompany = useCallback(() => {
     setActiveEventId(null);
     setScreen(SCREENS.CREATE);
     setError('');
   }, []);
 
-  // Select event from sidebar → go to orders (or results if already calculated)
   const handleSelectEvent = useCallback((event) => {
     setActiveEventId(event.id);
     setError('');
@@ -174,7 +157,6 @@ export default function App() {
     }
   }, []);
 
-  // Delete event from sidebar
   const handleDeleteEvent = useCallback((id) => {
     setEvents((prev) => prev.filter((e) => e.id !== id));
     if (activeEventId === id) {
@@ -184,7 +166,6 @@ export default function App() {
     }
   }, [activeEventId]);
 
-  // Compute if event is fully paid (all debtors checked)
   const isEventFullyPaid = useCallback((event) => {
     if (!event.result || !event.splitRequest) return false;
     const debts = event.result.debts || [];
@@ -193,23 +174,19 @@ export default function App() {
     return debts.every((d) => paid.includes(d.debtor));
   }, []);
 
-  // Prefill data for CreateCompany form
   const prefillData = screen === SCREENS.CREATE && activeEvent
     ? {
         id: activeEvent.id,
         title: activeEvent.title,
-        organizerName: activeEvent.organizerName,
-        count: activeEvent.participants.length,
-        existingParticipants: activeEvent.participants,
+        participants: activeEvent.participants,
       }
     : null;
 
   const orderCompanyData = activeEvent
     ? {
         title: activeEvent.title,
-        organizerName: activeEvent.organizerName,
         participants: activeEvent.participants,
-        sharedItems: activeEvent.sharedItems || [],
+        checks: activeEvent.checks || [],
       }
     : null;
 
@@ -304,7 +281,7 @@ export default function App() {
         {screen === SCREENS.RESULT && resultData && splitRequest && activeEvent && (
           <ResultTable
             result={resultData}
-            companyData={{ title: activeEvent.title, organizerName: activeEvent.organizerName }}
+            companyData={{ title: activeEvent.title, organizerName: '' }}
             participants={splitRequest.participants}
             paidDebtors={paidDebtors}
             onTogglePaid={handleTogglePaid}
