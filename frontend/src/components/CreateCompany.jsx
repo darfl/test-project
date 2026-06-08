@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
   const [title, setTitle] = useState('');
   const [participants, setParticipants] = useState([
-    { name: 'Участник 1' },
-    { name: 'Участник 2' },
+    { name: '' },
+    { name: '' },
   ]);
 
   useEffect(() => {
@@ -15,7 +15,7 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
       }
     } else {
       setTitle('');
-      setParticipants([{ name: 'Участник 1' }, { name: 'Участник 2' }]);
+      setParticipants([{ name: '' }, { name: '' }]);
     }
   }, [prefill]);
 
@@ -39,7 +39,7 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
 
   const handleAddParticipant = () => {
     if (participants.length >= MAX_PARTICIPANTS) return;
-    setParticipants((prev) => [...prev, { name: `Участник ${prev.length + 1}` }]);
+    setParticipants((prev) => [...prev, { name: '' }]);
   };
 
   const handleRemoveParticipant = (index) => {
@@ -89,11 +89,6 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
                 type="text"
                 value={p.name}
                 onChange={(e) => handleNameChange(i, e.target.value)}
-                onFocus={(e) => {
-                  if (e.target.value.startsWith('Участник ')) {
-                    e.target.select();
-                  }
-                }}
                 placeholder={`Участник ${i + 1}`}
               />
               {participants.length > 2 && (
