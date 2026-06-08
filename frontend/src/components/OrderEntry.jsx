@@ -1,250 +1,121 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 
 export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUpdateEvent }) {
-  const [participants, setParticipants] = useState(() =>
-    companyData.participants.map((p) => ({
-      ...p,
-      contribution: p.contribution || 0,
-      items: p.items && p.items.length > 0
-        ? p.items.map((it) => ({ name: it.name || '', amount: it.amount || 0 }))
-        : [{ name: p.order || '', amount: p.amount || 0 }], // migrate from single order
-    }))
-  );
-  const [sharedItems, setSharedItems] = useState(() =>
-    companyData.sharedItems ? companyData.sharedItems.map((s) => ({ ...s })) : []
-  );
-  const [inCheckShared, setInCheckShared] = useState(() =>
-    companyData.inCheckShared ? companyData.inCheckShared.map((s) => ({ ...s })) : []
-  );
-  const [organizerName, setOrganizerName] = useState(companyData.organizerName);
+  const [checks, setChecks] = useState(() => {
+    if (companyData.checks && companyData.checks.length > 0) {
+      return companyData.checks.map((c) => ({
+        name: c.name || '',
+        items: c.items ? c.items.map((it) => ({ ...it })) : [],
+        paidBy: c.paidBy || companyData.participants[0]?.name || '',
+      }));
+    }
+    return [
+      {
+        name: 'Чек 1',
+        items: [{ name: '', amount: 0, sharedWith: [] }],
+        paidBy: companyData.participants[0]?.name || '',
+      },
+    ];
+  });
+
+  const participants = companyData.participants || [];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const isFirstRender = useRef(true);
   useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
     if (onUpdateEvent && eventId) {
-      onUpdateEvent(eventId, {
-        participants: participants.map((p) => ({ ...p })),
-        sharedItems: sharedItems.map((s) => ({ ...s })),
-        organizerName,
-      });
+      onUpdateEvent(eventId, { checks: checks.map((c) => ({ ...c, items: (c.items || []).map((it) => ({ ...it })) })) });
     }
-  }, [participants, sharedItems, organizerName, onUpdateEvent, eventId]);
+  }, [checks, onUpdateEvent, eventId]);
 
-  const MAX_PARTICIPANTS = 8;
-  const MIN_PARTICIPANTS = 2;
-
-  // Computed totals from items
-  const personalTotal = useMemo(() => {
+  const grandTotal = useMemo(() => {
     let sum = 0;
-    participants.forEach((p) => {
-      (p.items || []).forEach((it) => {
-        sum += parseFloat(it.amount) || 0;
-      });
-    });
+    checks.forEach((c) => (c.items || []).forEach((it) => (sum += parseFloat(it.amount) || 0)));
     return sum;
-  }, [participants]);
+  }, [checks]);
 
-  const inCheckTotal = useMemo(() => {
-    return inCheckShared.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
-  }, [inCheckShared]);
+  // --- Check handlers ---
+  const handleCheckNameChange = useCallback((cIdx, value) => {
+    setChecks((prev) => { const next = [...prev]; next[cIdx] = { ...next[cIdx], name: value }; return next; });
+  }, []);
 
-  const sharedTotal = useMemo(() => {
-    return sharedItems.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
-  }, [sharedItems]);
+  const handleCheckPayerChange = useCallback((cIdx, value) => {
+    setChecks((prev) => { const next = [...prev]; next[cIdx] = { ...next[cIdx], paidBy: value }; return next; });
+  }, []);
 
-  const grandTotal = personalTotal + inCheckTotal + sharedTotal;
-  const sharedPerPerson = useMemo(() => {
-    return participants.length > 0 ? sharedTotal / participants.length : 0;
-  }, [sharedTotal, participants.length]);
+  const handleAddCheck = () => {
+    setChecks((prev) => [...prev, { name: `Чек ${prev.length + 1}`, items: [{ name: '', amount: 0, sharedWith: [] }], paidBy: participants[0]?.name || '' }]);
+  };
 
-  // --- Participant handlers ---
-  const handleNameChange = useCallback((index, value) => {
-    setParticipants((prev) => {
-      const oldName = prev[index].name;
+  const handleRemoveCheck = (cIdx) => {
+    if (checks.length <= 1) return;
+    setChecks((prev) => { const next = [...prev]; next.splice(cIdx, 1); return next; });
+  };
+
+  // --- Item handlers within a check ---
+  const handleItemNameChange = useCallback((cIdx, iIdx, value) => {
+    setChecks((prev) => {
       const next = [...prev];
-      next[index] = { ...next[index], name: value };
-      if (oldName === organizerName || (!oldName && organizerName === `Человек ${index + 1}`)) {
-        setOrganizerName(value || `Человек ${index + 1}`);
-      }
-      return next;
-    });
-  }, [organizerName]);
-
-  const handleItemNameChange = useCallback((pIdx, idx, value) => {
-    setParticipants((prev) => {
-      const next = [...prev];
-      const items = [...(next[pIdx].items || [])];
-      items[idx] = { ...items[idx], name: value };
-      next[pIdx] = { ...next[pIdx], items };
+      const items = [...(next[cIdx].items || [])];
+      items[iIdx] = { ...items[iIdx], name: value };
+      next[cIdx] = { ...next[cIdx], items };
       return next;
     });
   }, []);
 
-  const handleItemAmountChange = useCallback((pIdx, idx, value) => {
-    setParticipants((prev) => {
+  const handleItemAmountChange = useCallback((cIdx, iIdx, value) => {
+    setChecks((prev) => {
       const next = [...prev];
-      const items = [...(next[pIdx].items || [])];
+      const items = [...(next[cIdx].items || [])];
       const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
-      items[idx] = { ...items[idx], amount: num };
-      next[pIdx] = { ...next[pIdx], items };
+      items[iIdx] = { ...items[iIdx], amount: num };
+      next[cIdx] = { ...next[cIdx], items };
       return next;
     });
   }, []);
 
-  const handleAddItem = useCallback((pIdx) => {
-    setParticipants((prev) => {
+  const handleAddItem = useCallback((cIdx) => {
+    setChecks((prev) => {
       const next = [...prev];
-      next[pIdx] = {
-        ...next[pIdx],
-        items: [...(next[pIdx].items || []), { name: '', amount: 0 }],
-      };
+      next[cIdx] = { ...next[cIdx], items: [...(next[cIdx].items || []), { name: '', amount: 0, sharedWith: [] }] };
       return next;
     });
   }, []);
 
-  const handleRemoveItem = useCallback((pIdx, idx) => {
-    setParticipants((prev) => {
+  const handleRemoveItem = useCallback((cIdx, iIdx) => {
+    setChecks((prev) => {
       const next = [...prev];
-      const items = [...(next[pIdx].items || [])];
-      if (items.length <= 1) return prev; // keep at least one
-      items.splice(idx, 1);
-      next[pIdx] = { ...next[pIdx], items };
+      const items = [...(next[cIdx].items || [])];
+      if (items.length <= 1) return prev;
+      items.splice(iIdx, 1);
+      next[cIdx] = { ...next[cIdx], items };
       return next;
     });
   }, []);
-
-  const handleAddParticipant = () => {
-    if (participants.length >= MAX_PARTICIPANTS) return;
-    const newIndex = participants.length + 1;
-    setParticipants((prev) => [
-      ...prev,
-      { name: `Человек ${newIndex}`, items: [{ name: '', amount: 0 }], contribution: 0 },
-    ]);
-  };
-
-  const handleRemoveParticipant = (index) => {
-    if (participants.length <= MIN_PARTICIPANTS) return;
-    setParticipants((prev) => {
-      const next = [...prev];
-      next.splice(index, 1);
-      return next;
-    });
-  };
-
-  // --- Shared item handlers ---
-  const handleSharedItemNameChange = useCallback((index, value) => {
-    setSharedItems((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], name: value };
-      return next;
-    });
-  }, []);
-
-  const handleSharedItemAmountChange = useCallback((index, value) => {
-    setSharedItems((prev) => {
-      const next = [...prev];
-      const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
-      next[index] = { ...next[index], amount: num };
-      return next;
-    });
-  }, []);
-
-  const handleInCheckNameChange = useCallback((index, value) => {
-    setInCheckShared((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], name: value };
-      return next;
-    });
-  }, []);
-
-  const handleInCheckAmountChange = useCallback((index, value) => {
-    setInCheckShared((prev) => {
-      const next = [...prev];
-      const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
-      next[index] = { ...next[index], amount: num };
-      return next;
-    });
-  }, []);
-
-  const handleAddInCheck = () => {
-    setInCheckShared((prev) => [...prev, { name: '', amount: 0, sharedWith: [] }]);
-  };
-
-  const handleRemoveInCheck = (index) => {
-    setInCheckShared((prev) => {
-      const next = [...prev];
-      next.splice(index, 1);
-      return next;
-    });
-  };
-
-  const handleAddSharedItem = () => {
-    setSharedItems((prev) => [...prev, { name: '', amount: 0, paidBy: '' }]);
-  };
-
-  const handleRemoveSharedItem = (index) => {
-    setSharedItems((prev) => {
-      const next = [...prev];
-      next.splice(index, 1);
-      return next;
-    });
-  };
 
   const handleSplit = async () => {
     setError('');
-
-    const hasAnyAmount =
-      participants.some((p) =>
-        (p.items || []).some((it) => parseFloat(it.amount) > 0)
-      ) || sharedItems.some((s) => parseFloat(s.amount) > 0);
-
-    if (!hasAnyAmount) {
-      setError('Должна быть хотя бы одна сумма > 0');
-      return;
-    }
-
-    const orgExists = participants.some((p) => {
-      const pName = (p.name || '').trim();
-      const fallback = `Человек ${participants.indexOf(p) + 1}`;
-      return organizerName === (pName || fallback);
-    });
-    if (!orgExists) {
-      setError('Организатор должен быть среди участников');
-      return;
-    }
-
+    const hasAny = checks.some((c) => (c.items || []).some((it) => parseFloat(it.amount) > 0));
+    if (!hasAny) { setError('Должна быть хотя бы одна сумма > 0'); return; }
     setLoading(true);
     try {
-      const requestData = {
-        organizerName,
-        participants: participants.map((p) => ({
-          name: p.name.trim() || `Человек ${participants.indexOf(p) + 1}`,
-          items: (p.items || []).map((it) => ({
-            name: it.name || '',
+      const sharedItems = [];
+      checks.forEach((c) => {
+        (c.items || []).filter((it) => parseFloat(it.amount) > 0).forEach((it) => {
+          sharedItems.push({
+            name: it.name || 'Позиция',
             amount: parseFloat(it.amount) || 0,
-          })),
-          contribution: parseFloat(p.contribution) || 0,
-        })),
-        inCheckShared: inCheckShared
-          .filter((s) => parseFloat(s.amount) > 0)
-          .map((s) => ({
-            name: s.name || '',
-            amount: parseFloat(s.amount) || 0,
-            sharedWith: s.sharedWith || [],
-          })),
-        sharedItems: sharedItems
-          .filter((s) => parseFloat(s.amount) > 0)
-          .map((s) => ({
-            name: s.name || 'Общее',
-            amount: parseFloat(s.amount) || 0,
-            paidBy: s.paidBy || '',
-            sharedWith: s.sharedWith || [],
-          })),
+            paidBy: c.paidBy || participants[0]?.name || '',
+            sharedWith: it.sharedWith || [],
+          });
+        });
+      });
+      const requestData = {
+        organizerName: sharedItems.length > 0 ? sharedItems[0].paidBy : '',
+        participants: participants.map((p) => ({ name: p.name || '', items: [], contribution: 0 })),
+        sharedItems,
       };
       onSplit(requestData);
     } catch (err) {
@@ -257,427 +128,79 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   return (
     <div className="order-entry">
       <h2>💰 Расходы компании {companyData.title}</h2>
-
       {error && <div className="error-message">{error}</div>}
 
-      <div className="form-group">
-        <label>💵 Кто оплатил</label>
-        <select value={organizerName} onChange={(e) => setOrganizerName(e.target.value)}>
-          {participants.map((p, i) => (
-            <option key={i} value={p.name || `Человек ${i + 1}`}>
-              {p.name || `Человек ${i + 1}`}
-            </option>
-          ))}
-        </select>
-      </div>
+      {checks.map((c, cIdx) => (
+        <div key={cIdx} className="check-block" style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '12px', padding: '16px', marginBottom: '16px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '12px' }}>
+            <input
+              className="name-input"
+              type="text"
+              value={c.name}
+              onChange={(e) => handleCheckNameChange(cIdx, e.target.value)}
+              placeholder="Название чека"
+              style={{ flex: 2 }}
+            />
+            <select
+              className="payee-select"
+              value={c.paidBy || ''}
+              onChange={(e) => handleCheckPayerChange(cIdx, e.target.value)}
+            >
+              <option value="">Кто оплатил</option>
+              {participants.map((pp) => (
+                <option key={pp.name} value={pp.name}>{pp.name}</option>
+              ))}
+            </select>
+            {checks.length > 1 && (
+              <button className="btn-delete" onClick={() => handleRemoveCheck(cIdx)} title="Удалить чек">✕</button>
+            )}
+          </div>
 
-      {/* Personal orders */}
-      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '16px' }}>👤 Личные траты</h3>
-      <div className="participants-list">
-        {participants.map((p, pIdx) => (
-          <div className="participant-block" key={pIdx}>
-            <div className="participant-row">
-              <input
-                className="name-input"
-                type="text"
-                value={p.name}
-                onChange={(e) => handleNameChange(pIdx, e.target.value)}
-                onFocus={(e) => {
-                  if (e.target.value === `Человек ${pIdx + 1}`) {
-                    e.target.select();
-                  }
-                }}
-                placeholder={`Имя ${pIdx + 1}`}
-                title="Нажмите, чтобы изменить имя"
-              />
-              <div style={{ flex: 3, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {(p.items || []).map((it, iIdx) => (
-                  <div key={iIdx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <input
-                      className="order-input"
-                      type="text"
-                      value={it.name}
-                      onChange={(e) => handleItemNameChange(pIdx, iIdx, e.target.value)}
-                      placeholder="Что заказал"
-                      style={{ flex: 2 }}
-                    />
-                        <input
-                          className="amount-input"
-                          type="number"
-                          min="0"
-                          onKeyDown={(e) => {
-                            if (e.key === '-' || e.key === '+' || e.key === 'e') {
-                              e.preventDefault();
-                            }
-                          }}
-                          value={it.amount === 0 ? '' : it.amount}
-                          onChange={(e) => handleItemAmountChange(pIdx, iIdx, e.target.value)}
-                          placeholder="Сумма"
-                        />
-                    {(p.items || []).length > 1 && (
-                      <button
-                        type="button"
-                        className="btn-delete"
-                        onClick={() => handleRemoveItem(pIdx, iIdx)}
-                        title="Удалить позицию"
-                        style={{ fontSize: '1rem', padding: '2px 8px' }}
-                      >
-                        ✕
-                      </button>
+          <div className="participants-list">
+            {(c.items || []).map((it, iIdx) => {
+              const sharedWith = it.sharedWith || [];
+              const allSelected = participants.length > 0 && sharedWith.length === participants.length;
+              return (
+                <div className="participant-block" key={iIdx}>
+                  <div className="participant-row">
+                    <input className="order-input" type="text" value={it.name} onChange={(e) => handleItemNameChange(cIdx, iIdx, e.target.value)} placeholder="Что заказал" style={{ flex: 2 }} />
+                    <input className="amount-input" type="number" min="0" onKeyDown={(e) => { if (e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault(); }} value={it.amount === 0 ? '' : it.amount} onChange={(e) => handleItemAmountChange(cIdx, iIdx, e.target.value)} placeholder="Сумма" />
+                    {(c.items || []).length > 1 && (
+                      <button className="btn-delete" onClick={() => handleRemoveItem(cIdx, iIdx)} title="Удалить позицию" style={{ fontSize: '1rem', padding: '2px 8px' }}>✕</button>
                     )}
                   </div>
-                ))}
-                <button
-                  type="button"
-                  className="btn btn-add"
-                  onClick={() => handleAddItem(pIdx)}
-                  style={{ fontSize: '0.78rem', padding: '5px 10px' }}
-                >
-                  + добавить позицию
-                </button>
-              </div>
-              <button
-                className="btn-delete"
-                onClick={() => handleRemoveParticipant(pIdx)}
-                disabled={participants.length <= MIN_PARTICIPANTS}
-                title="Удалить участника"
-              >
-                ✕
-              </button>
-            </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '4px', paddingLeft: '4px' }}>
+                    <label style={{ color: allSelected ? '#4ade80' : '#555', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '4px', background: allSelected ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${allSelected ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.05)'}` }}>
+                      <input type="checkbox" checked={allSelected} onChange={() => { setChecks((prev) => { const next = [...prev]; const items = [...(next[cIdx].items || [])]; if (allSelected) { items[iIdx] = { ...items[iIdx], sharedWith: [] }; } else { items[iIdx] = { ...items[iIdx], sharedWith: participants.map((pp) => pp.name) }; } next[cIdx] = { ...next[cIdx], items }; return next; }); }} style={{ accentColor: '#4ade80', width: '12px', height: '12px' }} />
+                      Все
+                    </label>
+                    {participants.map((pp) => { const isChecked = sharedWith.includes(pp.name); return (
+                      <label key={pp.name} style={{ color: isChecked ? '#4ade80' : '#555', fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '4px', background: isChecked ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.03)', border: `1px solid ${isChecked ? 'rgba(74,222,128,0.25)' : 'rgba(255,255,255,0.05)'}` }}>
+                        <input type="checkbox" checked={isChecked} onChange={() => { setChecks((prev) => { const next = [...prev]; const items = [...(next[cIdx].items || [])]; const cur = items[iIdx].sharedWith || []; if (isChecked) { items[iIdx] = { ...items[iIdx], sharedWith: cur.filter((n) => n !== pp.name) }; } else { items[iIdx] = { ...items[iIdx], sharedWith: [...cur, pp.name] }; } next[cIdx] = { ...next[cIdx], items }; return next; }); }} style={{ accentColor: '#4ade80', width: '12px', height: '12px' }} />
+                        {pp.name}
+                      </label>
+                    ); })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
 
-      <button
-        className="btn btn-add"
-        onClick={handleAddParticipant}
-        disabled={participants.length >= MAX_PARTICIPANTS}
-      >
-        + Добавить человека
-        {participants.length >= MAX_PARTICIPANTS ? ' (макс 8)' : ''}
-      </button>
-
-      {/* In-check shared items */}
-      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции в этом чеке</h3>
-      {inCheckShared.length === 0 && (
-        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '10px' }}>
-          Пицца на двоих, набор настоек — позиции из основного чека, которые делятся на выбранных участников
-        </p>
-      )}
-      <div className="participants-list">
-        {inCheckShared.map((s, i) => {
-          const sharedWith = s.sharedWith || [];
-          const allSelected = participants.length > 0 && sharedWith.length === participants.length;
-          return (
-            <div className="participant-block" key={i}>
-              <div className="participant-row">
-                <input
-                  className="order-input"
-                  type="text"
-                  value={s.name}
-                  onChange={(e) => handleInCheckNameChange(i, e.target.value)}
-                  placeholder="Название"
-                  style={{ flex: 2 }}
-                />
-                <input
-                  className="amount-input"
-                  type="number"
-                  min="0"
-                  onKeyDown={(e) => {
-                    if (e.key === '-' || e.key === '+' || e.key === 'e') {
-                      e.preventDefault();
-                    }
-                  }}
-                  value={s.amount === 0 ? '' : s.amount}
-                  onChange={(e) => handleInCheckAmountChange(i, e.target.value)}
-                  placeholder="Сумма"
-                />
-                <span style={{ color: '#888', fontSize: '0.75rem', maxWidth: '80px', textAlign: 'center' }}>
-                  оплатил {organizerName}
-                </span>
-                <button
-                  className="btn-delete"
-                  onClick={() => handleRemoveInCheck(i)}
-                  title="Удалить позицию"
-                >
-                  ✕
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', paddingLeft: '8px' }}>
-                <label
-                  style={{
-                    color: allSelected ? '#4ade80' : '#888',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    background: allSelected ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${allSelected ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={() => {
-                      setInCheckShared((prev) => {
-                        const next = [...prev];
-                        if (allSelected) {
-                          next[i] = { ...next[i], sharedWith: [] };
-                        } else {
-                          next[i] = { ...next[i], sharedWith: participants.map((pp) => pp.name) };
-                        }
-                        return next;
-                      });
-                    }}
-                    style={{ accentColor: '#4ade80' }}
-                  />
-                  Все
-                </label>
-                {participants.map((pp) => {
-                  const isChecked = sharedWith.includes(pp.name);
-                  return (
-                    <label
-                      key={pp.name}
-                      style={{
-                        color: isChecked ? '#4ade80' : '#888',
-                        fontSize: '0.78rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '3px 10px',
-                        borderRadius: '6px',
-                        background: isChecked ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${isChecked ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          setInCheckShared((prev) => {
-                            const next = [...prev];
-                            const current = next[i].sharedWith || [];
-                            if (isChecked) {
-                              next[i] = { ...next[i], sharedWith: current.filter((n) => n !== pp.name) };
-                            } else {
-                              next[i] = { ...next[i], sharedWith: [...current, pp.name] };
-                            }
-                            return next;
-                          });
-                        }}
-                        style={{ accentColor: '#4ade80' }}
-                      />
-                      {pp.name}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <button className="btn btn-add" onClick={handleAddInCheck}>
-        + Добавить позицию в чек
-      </button>
-
-      {inCheckShared.length > 0 && (
-        <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '8px' }}>
-          {inCheckShared.filter(s => parseFloat(s.amount) > 0).map((s, i) => {
-            const cnt = (s.sharedWith && s.sharedWith.length > 0) ? s.sharedWith.length : participants.length;
-            const per = cnt > 0 ? (parseFloat(s.amount) || 0) / cnt : 0;
-            return (
-              <span key={i} style={{ display: 'inline-block', marginRight: '16px' }}>
-                {s.name}: по {per.toFixed(2)} ₽ с чел.
-              </span>
-            );
-          })}
+          <button className="btn btn-add" onClick={() => handleAddItem(cIdx)} style={{ fontSize: '0.78rem', padding: '5px 10px' }}>+ добавить позицию</button>
         </div>
-      )}
+      ))}
 
-      {/* Shared items (separate check) */}
-      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции (отдельный чек)</h3>
-      {sharedItems.length === 0 && (
-        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '10px' }}>
-          Пицца, пиво, кальян — всё, что делится на нескольких участников
-        </p>
-      )}
-      <div className="participants-list">
-        {sharedItems.map((s, i) => {
-          const sharedWith = s.sharedWith || [];
-          const allSelected = participants.length > 0 && sharedWith.length === participants.length;
-          return (
-            <div className="participant-block" key={i}>
-              <div className="participant-row">
-                <input
-                  className="order-input"
-                  type="text"
-                  value={s.name}
-                  onChange={(e) => handleSharedItemNameChange(i, e.target.value)}
-                  placeholder="Название"
-                  style={{ flex: 2 }}
-                />
-                <input
-                  className="amount-input"
-                  type="number"
-                  min="0"
-                  onKeyDown={(e) => {
-                    if (e.key === '-' || e.key === '+' || e.key === 'e') {
-                      e.preventDefault();
-                    }
-                  }}
-                  value={s.amount === 0 ? '' : s.amount}
-                  onChange={(e) => handleSharedItemAmountChange(i, e.target.value)}
-                  placeholder="Сумма"
-                />
-                <select
-                  className="payee-select"
-                  value={s.paidBy || ''}
-                  onChange={(e) => {
-                    setSharedItems((prev) => {
-                      const next = [...prev];
-                      next[i] = { ...next[i], paidBy: e.target.value };
-                      return next;
-                    });
-                  }}
-                >
-                  <option value="">Кто оплатил</option>
-                  {participants.map((pp) => (
-                    <option key={pp.name} value={pp.name}>{pp.name}</option>
-                  ))}
-                </select>
-                <button
-                  className="btn-delete"
-                  onClick={() => handleRemoveSharedItem(i)}
-                  title="Удалить позицию"
-                >
-                  ✕
-                </button>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', paddingLeft: '8px' }}>
-                <label
-                  style={{
-                    color: allSelected ? '#4ade80' : '#888',
-                    fontSize: '0.78rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    background: allSelected ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${allSelected ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={() => {
-                      setSharedItems((prev) => {
-                        const next = [...prev];
-                        if (allSelected) {
-                          next[i] = { ...next[i], sharedWith: [] };
-                        } else {
-                          next[i] = { ...next[i], sharedWith: participants.map((pp) => pp.name) };
-                        }
-                        return next;
-                      });
-                    }}
-                    style={{ accentColor: '#4ade80' }}
-                  />
-                  Все
-                </label>
-                {participants.map((pp) => {
-                  const isChecked = sharedWith.includes(pp.name);
-                  return (
-                    <label
-                      key={pp.name}
-                      style={{
-                        color: isChecked ? '#4ade80' : '#888',
-                        fontSize: '0.78rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '3px 10px',
-                        borderRadius: '6px',
-                        background: isChecked ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
-                        border: `1px solid ${isChecked ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => {
-                          setSharedItems((prev) => {
-                            const next = [...prev];
-                            const current = next[i].sharedWith || [];
-                            if (isChecked) {
-                              next[i] = { ...next[i], sharedWith: current.filter((n) => n !== pp.name) };
-                            } else {
-                              next[i] = { ...next[i], sharedWith: [...current, pp.name] };
-                            }
-                            return next;
-                          });
-                        }}
-                        style={{ accentColor: '#4ade80' }}
-                      />
-                      {pp.name}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <button className="btn btn-add" onClick={handleAddSharedItem}>
-        + Добавить общую позицию
+      <button className="btn btn-add" onClick={handleAddCheck} style={{ marginTop: '8px' }}>
+        + Добавить чек
       </button>
-
-      {sharedItems.length > 0 && (
-        <div style={{ color: '#888', fontSize: '0.8rem', marginTop: '8px' }}>
-          {sharedItems.filter(s => parseFloat(s.amount) > 0).map((s, i) => {
-            const cnt = (s.sharedWith && s.sharedWith.length > 0) ? s.sharedWith.length : participants.length;
-            const per = cnt > 0 ? (parseFloat(s.amount) || 0) / cnt : 0;
-            return (
-              <span key={i} style={{ display: 'inline-block', marginRight: '16px' }}>
-                {s.name}: по {per.toFixed(2)} ₽ с чел.
-              </span>
-            );
-          })}
-        </div>
-      )}
 
       <div className="stats-bar">
-        <div className="stat">
-          Личные: <span>{personalTotal.toFixed(2)} ₽</span>
-        </div>
-        <div className="stat">
-          Общие: <span>{sharedTotal.toFixed(2)} ₽</span>
-        </div>
-        <div className="stat">
-          Итого: <span>{grandTotal.toFixed(2)} ₽</span>
-        </div>
+        <div className="stat">Итого: <span>{grandTotal.toFixed(2)} ₽</span></div>
       </div>
 
       <div className="bottom-actions">
-        <button className="btn btn-secondary" onClick={onBack}>
-          ← Назад
-        </button>
-        <button
-          className="btn btn-primary"
-          onClick={handleSplit}
-          disabled={loading}
-        >
-          {loading ? 'Считаем...' : 'Разделить'}
-        </button>
+        <button className="btn btn-secondary" onClick={onBack}>← Назад</button>
+        <button className="btn btn-primary" onClick={handleSplit} disabled={loading}>{loading ? 'Считаем...' : 'Разделить'}</button>
       </div>
     </div>
   );

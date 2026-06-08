@@ -1,59 +1,69 @@
 import React, { useState, useEffect } from 'react';
 
-const NAMES = [
-  'Человек 1', 'Человек 2', 'Человек 3', 'Человек 4',
-  'Человек 5', 'Человек 6', 'Человек 7', 'Человек 8',
-];
-
 export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
   const [title, setTitle] = useState('');
-  const [count, setCount] = useState(2);
+  const [participants, setParticipants] = useState([
+    { name: 'Участник 1' },
+    { name: 'Участник 2' },
+  ]);
 
   useEffect(() => {
     if (prefill) {
       setTitle(prefill.title || '');
-      if (prefill.count >= 2 && prefill.count <= 8) {
-        setCount(prefill.count);
+      if (prefill.participants && prefill.participants.length >= 2) {
+        setParticipants(prefill.participants.map((p) => ({ name: p.name || '' })));
       }
     } else {
       setTitle('');
-      setCount(2);
+      setParticipants([{ name: 'Участник 1' }, { name: 'Участник 2' }]);
     }
   }, [prefill]);
+
+  const MAX_PARTICIPANTS = 8;
 
   const isEditing = !!prefill;
 
   const hasChanges = isEditing
-    ? title !== (prefill.title || '') || count !== prefill.count
+    ? title !== (prefill.title || '') ||
+      participants.length !== (prefill.participants ? prefill.participants.length : 2) ||
+      participants.some((p, i) => p.name !== (prefill.participants?.[i]?.name || ''))
     : true;
+
+  const handleNameChange = (index, value) => {
+    setParticipants((prev) => {
+      const next = [...prev];
+      next[index] = { name: value };
+      return next;
+    });
+  };
+
+  const handleAddParticipant = () => {
+    if (participants.length >= MAX_PARTICIPANTS) return;
+    setParticipants((prev) => [...prev, { name: `Участник ${prev.length + 1}` }]);
+  };
+
+  const handleRemoveParticipant = (index) => {
+    if (participants.length <= 2) return;
+    setParticipants((prev) => {
+      const next = [...prev];
+      next.splice(index, 1);
+      return next;
+    });
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const selectedNames = NAMES.slice(0, count);
-    const finalOrganizer = selectedNames[0];
-
-    const existingParticipants = prefill?.existingParticipants || [];
-    const participants = selectedNames.map((name) => {
-      const existing = existingParticipants.find((p) => p.name === name);
-      return {
-        name,
-        order: existing ? existing.order : '',
-        amount: existing ? existing.amount : 0,
-      };
-    });
+    const names = participants.map((p) => p.name?.trim() || `Участник ${participants.indexOf(p) + 1}`);
 
     onNext(
       {
         title: title.trim() || 'Ужин',
-        organizerName: finalOrganizer,
-        participants,
+        participants: names.map((name) => ({ name, items: [], contribution: 0 })),
       },
       prefill?.id || null
     );
   };
-
-  const countOptions = [2, 3, 4, 5, 6, 7, 8];
 
   return (
     <form className="create-company" onSubmit={handleSubmit}>
@@ -70,12 +80,45 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
       </div>
 
       <div className="form-group">
-        <label>Количество человек</label>
-        <select value={count} onChange={(e) => setCount(parseInt(e.target.value, 10))}>
-          {countOptions.map((n) => (
-            <option key={n} value={n}>{n}</option>
+        <label>Участники</label>
+        <div className="participants-list">
+          {participants.map((p, i) => (
+            <div className="participant-row" key={i}>
+              <input
+                className="name-input"
+                type="text"
+                value={p.name}
+                onChange={(e) => handleNameChange(i, e.target.value)}
+                onFocus={(e) => {
+                  if (e.target.value.startsWith('Участник ')) {
+                    e.target.select();
+                  }
+                }}
+                placeholder={`Участник ${i + 1}`}
+              />
+              {participants.length > 2 && (
+                <button
+                  type="button"
+                  className="btn-delete"
+                  onClick={() => handleRemoveParticipant(i)}
+                  title="Удалить участника"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ))}
-        </select>
+        </div>
+        <button
+          type="button"
+          className="btn btn-add"
+          onClick={handleAddParticipant}
+          disabled={participants.length >= MAX_PARTICIPANTS}
+          style={{ marginTop: '10px' }}
+        >
+          + Добавить участника
+          {participants.length >= MAX_PARTICIPANTS ? ' (макс 8)' : ''}
+        </button>
       </div>
 
       <div className="bottom-actions">
