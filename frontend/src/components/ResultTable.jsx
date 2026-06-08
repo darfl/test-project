@@ -33,12 +33,12 @@ export default function ResultTable({ result, companyData, participants, paidDeb
 
   return (
     <div className="result-container">
-      <h2>📊 Результат — {title}</h2>
+      <h2>📊 Результаты расходов для компании «{title}»</h2>
 
       <div className="summary-block">
         <h3>💰 Итого</h3>
         <p style={{ marginBottom: '10px', fontSize: '1.05rem' }}>
-          Общий счёт: <strong style={{ color: '#4ade80' }}>{total.toFixed(2)} ₽</strong>
+          Общий расход: <strong style={{ color: '#4ade80' }}>{total.toFixed(2)} ₽</strong>
         </p>
         {(!debts || debts.length === 0) ? (
           <p style={{ color: '#4ade80' }}>✅ Все рассчитались, долгов нет!</p>
