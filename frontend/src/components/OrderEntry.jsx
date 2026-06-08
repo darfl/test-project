@@ -13,6 +13,9 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const [sharedItems, setSharedItems] = useState(() =>
     companyData.sharedItems ? companyData.sharedItems.map((s) => ({ ...s })) : []
   );
+  const [inCheckShared, setInCheckShared] = useState(() =>
+    companyData.inCheckShared ? companyData.inCheckShared.map((s) => ({ ...s })) : []
+  );
   const [organizerName, setOrganizerName] = useState(companyData.organizerName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -46,11 +49,15 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
     return sum;
   }, [participants]);
 
+  const inCheckTotal = useMemo(() => {
+    return inCheckShared.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
+  }, [inCheckShared]);
+
   const sharedTotal = useMemo(() => {
     return sharedItems.reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
   }, [sharedItems]);
 
-  const grandTotal = personalTotal + sharedTotal;
+  const grandTotal = personalTotal + inCheckTotal + sharedTotal;
   const sharedPerPerson = useMemo(() => {
     return participants.length > 0 ? sharedTotal / participants.length : 0;
   }, [sharedTotal, participants.length]);
@@ -147,6 +154,35 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
     });
   }, []);
 
+  const handleInCheckNameChange = useCallback((index, value) => {
+    setInCheckShared((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], name: value };
+      return next;
+    });
+  }, []);
+
+  const handleInCheckAmountChange = useCallback((index, value) => {
+    setInCheckShared((prev) => {
+      const next = [...prev];
+      const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
+      next[index] = { ...next[index], amount: num };
+      return next;
+    });
+  }, []);
+
+  const handleAddInCheck = () => {
+    setInCheckShared((prev) => [...prev, { name: '', amount: 0, sharedWith: [] }]);
+  };
+
+  const handleRemoveInCheck = (index) => {
+    setInCheckShared((prev) => {
+      const next = [...prev];
+      next.splice(index, 1);
+      return next;
+    });
+  };
+
   const handleAddSharedItem = () => {
     setSharedItems((prev) => [...prev, { name: '', amount: 0, paidBy: '' }]);
   };
@@ -194,6 +230,13 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
           })),
           contribution: parseFloat(p.contribution) || 0,
         })),
+        inCheckShared: inCheckShared
+          .filter((s) => parseFloat(s.amount) > 0)
+          .map((s) => ({
+            name: s.name || '',
+            amount: parseFloat(s.amount) || 0,
+            sharedWith: s.sharedWith || [],
+          })),
         sharedItems: sharedItems
           .filter((s) => parseFloat(s.amount) > 0)
           .map((s) => ({
@@ -315,8 +358,136 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
         {participants.length >= MAX_PARTICIPANTS ? ' (макс 8)' : ''}
       </button>
 
-      {/* Shared items */}
-      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции</h3>
+      {/* In-check shared items */}
+      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции в этом чеке</h3>
+      {inCheckShared.length === 0 && (
+        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '10px' }}>
+          Пицца на двоих, набор настоек — позиции из основного чека, которые делятся на выбранных участников
+        </p>
+      )}
+      <div className="participants-list">
+        {inCheckShared.map((s, i) => {
+          const sharedWith = s.sharedWith || [];
+          const allSelected = participants.length > 0 && sharedWith.length === participants.length;
+          return (
+            <div className="participant-block" key={i}>
+              <div className="participant-row">
+                <input
+                  className="order-input"
+                  type="text"
+                  value={s.name}
+                  onChange={(e) => handleInCheckNameChange(i, e.target.value)}
+                  placeholder="Название"
+                  style={{ flex: 2 }}
+                />
+                <input
+                  className="amount-input"
+                  type="number"
+                  min="0"
+                  onKeyDown={(e) => {
+                    if (e.key === '-' || e.key === '+' || e.key === 'e') {
+                      e.preventDefault();
+                    }
+                  }}
+                  value={s.amount === 0 ? '' : s.amount}
+                  onChange={(e) => handleInCheckAmountChange(i, e.target.value)}
+                  placeholder="Сумма"
+                />
+                <span style={{ color: '#888', fontSize: '0.75rem', maxWidth: '80px', textAlign: 'center' }}>
+                  оплатил {organizerName}
+                </span>
+                <button
+                  className="btn-delete"
+                  onClick={() => handleRemoveInCheck(i)}
+                  title="Удалить позицию"
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', paddingLeft: '8px' }}>
+                <label
+                  style={{
+                    color: allSelected ? '#4ade80' : '#888',
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    background: allSelected ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${allSelected ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={() => {
+                      setInCheckShared((prev) => {
+                        const next = [...prev];
+                        if (allSelected) {
+                          next[i] = { ...next[i], sharedWith: [] };
+                        } else {
+                          next[i] = { ...next[i], sharedWith: participants.map((pp) => pp.name) };
+                        }
+                        return next;
+                      });
+                    }}
+                    style={{ accentColor: '#4ade80' }}
+                  />
+                  Все
+                </label>
+                {participants.map((pp) => {
+                  const isChecked = sharedWith.includes(pp.name);
+                  return (
+                    <label
+                      key={pp.name}
+                      style={{
+                        color: isChecked ? '#4ade80' : '#888',
+                        fontSize: '0.78rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '3px 10px',
+                        borderRadius: '6px',
+                        background: isChecked ? 'rgba(74,222,128,0.12)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${isChecked ? 'rgba(74,222,128,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setInCheckShared((prev) => {
+                            const next = [...prev];
+                            const current = next[i].sharedWith || [];
+                            if (isChecked) {
+                              next[i] = { ...next[i], sharedWith: current.filter((n) => n !== pp.name) };
+                            } else {
+                              next[i] = { ...next[i], sharedWith: [...current, pp.name] };
+                            }
+                            return next;
+                          });
+                        }}
+                        style={{ accentColor: '#4ade80' }}
+                      />
+                      {pp.name}
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button className="btn btn-add" onClick={handleAddInCheck}>
+        + Добавить позицию в чек
+      </button>
+
+      {/* Shared items (separate check) */}
+      <h3 style={{ color: '#fff', fontSize: '1.05rem', marginBottom: '12px', marginTop: '24px' }}>🍕 Совместные позиции (отдельный чек)</h3>
       {sharedItems.length === 0 && (
         <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '10px' }}>
           Пицца, пиво, кальян — всё, что делится на нескольких участников

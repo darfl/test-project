@@ -5,6 +5,7 @@ import java.util.List;
 public class SplitRequest {
     private String organizerName;
     private List<ParticipantDto> participants;
+    private List<SharedItemDto> inCheckShared;
     private List<SharedItemDto> sharedItems;
 
     public SplitRequest() {}
@@ -20,6 +21,9 @@ public class SplitRequest {
 
     public List<ParticipantDto> getParticipants() { return participants; }
     public void setParticipants(List<ParticipantDto> participants) { this.participants = participants; }
+
+    public List<SharedItemDto> getInCheckShared() { return inCheckShared; }
+    public void setInCheckShared(List<SharedItemDto> inCheckShared) { this.inCheckShared = inCheckShared; }
 
     public List<SharedItemDto> getSharedItems() { return sharedItems; }
     public void setSharedItems(List<SharedItemDto> sharedItems) { this.sharedItems = sharedItems; }
