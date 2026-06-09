@@ -494,13 +494,19 @@ body {
   box-shadow: 0 0 0 2px rgba(51,111,238,0.15);
 }
 
-.check-name-text {
+.check-name-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex: 1;
   min-width: 0;
-  font-size: 0.92rem;
-  font-weight: 500;
+}
+
+.check-name-text {
+  font-size: 1.15rem;
+  font-weight: 700;
   color: var(--text-primary);
-  padding: 10px 16px;
+  padding: 10px 0 10px 4px;
 }
 
 .check-payer-select {

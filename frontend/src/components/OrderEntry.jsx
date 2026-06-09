@@ -172,7 +172,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                 </button>
               </>
             ) : (
-              <>
+              <div className="check-name-group">
                 <span className="check-name-text">{c.name}</span>
                 <button
                   className="btn btn-secondary"
@@ -182,7 +182,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                 >
                   ✎
                 </button>
-              </>
+              </div>
             )}
             {checks.length > 1 && (
               <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }} onClick={() => handleRemoveCheck(cIdx)} title="Удалить чек">✕</button>
