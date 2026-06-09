@@ -257,6 +257,35 @@ export default function App() {
 
         {error && <div className="error-message">{error}</div>}
 
+        <nav className="breadcrumbs">
+          <span
+            className={`breadcrumb-item ${screen === SCREENS.CREATE ? 'active' : ''}`}
+            onClick={() => { setError(''); setScreen(SCREENS.CREATE); }}
+          >
+            Компания
+          </span>
+          <span className="breadcrumb-sep">›</span>
+          <span
+            className={`breadcrumb-item ${screen === SCREENS.ORDERS ? 'active' : ''}`}
+            onClick={() => {
+              if (activeEventId) { setError(''); setScreen(SCREENS.ORDERS); }
+            }}
+            style={!activeEventId ? { opacity: 0.4, cursor: 'default' } : {}}
+          >
+            Расходы
+          </span>
+          <span className="breadcrumb-sep">›</span>
+          <span
+            className={`breadcrumb-item ${screen === SCREENS.RESULT ? 'active' : ''}`}
+            onClick={() => {
+              if (activeEventId && activeEvent?.result) { setError(''); setScreen(SCREENS.RESULT); }
+            }}
+            style={!activeEvent?.result ? { opacity: 0.4, cursor: 'default' } : {}}
+          >
+            Результаты
+          </span>
+        </nav>
+
         {screen === SCREENS.CREATE && (
           <CreateCompany
             onNext={handleCreate}
