@@ -160,10 +160,14 @@ body {
 
 /* ========== Main content ========== */
 .main-content {
-  max-width: calc(860px + 1cm);
-  margin: 0 auto;
+  flex: 1;
+  max-width: 860px;
   padding: 36px 28px;
-  padding-left: calc(28px + 1.5cm);
+}
+
+.no-sidebar .main-content {
+  max-width: 780px;
+  margin: 0 auto;
 }
 
 .app-header {
