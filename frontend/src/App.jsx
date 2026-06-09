@@ -194,12 +194,9 @@ export default function App() {
   const splitRequest = activeEvent?.splitRequest || null;
   const paidDebtors = activeEvent?.paidDebtors || [];
 
-  const showSidebar = screen === SCREENS.CREATE;
-
   return (
-    <div className={`app-layout ${showSidebar ? '' : 'no-sidebar'}`}>
-      {showSidebar && (
-        <aside className="sidebar">
+    <div className="app-layout">
+      <aside className="sidebar">
           <div className="sidebar-header">
             <h3>📋 События</h3>
             <button className="btn btn-add btn-new-event" onClick={handleNewCompany}>
@@ -246,8 +243,7 @@ export default function App() {
               );
             })}
           </ul>
-        </aside>
-      )}
+      </aside>
 
       <main className="main-content">
         <header className="app-header">
