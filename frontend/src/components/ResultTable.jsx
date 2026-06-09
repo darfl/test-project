@@ -67,11 +67,11 @@ export default function ResultTable({ result, companyData, participants, paidDeb
       </div>
 
       <div className="action-buttons">
-        <button className="btn btn-copy" onClick={handleCopyReminder}>
-          📋 Скопировать напоминалку
-        </button>
         <button className="btn btn-secondary" onClick={onBack}>
           ← Вернуться к заказам
+        </button>
+        <button className="btn btn-copy" onClick={handleCopyReminder}>
+          📋 Скопировать напоминалку
         </button>
       </div>
     </div>
