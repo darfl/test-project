@@ -23,6 +23,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
   const [editingCheck, setEditingCheck] = useState(null);
   const [editCheckName, setEditCheckName] = useState('');
   const [confirmDeleteCheck, setConfirmDeleteCheck] = useState(null);
+  const editInputRef = useRef(null);
 
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -150,6 +151,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
             {editingCheck !== null && editingCheck === cIdx ? (
               <>
                 <input
+                  ref={editInputRef}
                   className="check-name-input"
                   type="text"
                   value={editCheckName}
@@ -177,7 +179,11 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                 <button
                   className="btn btn-secondary"
                   style={{ fontSize: '0.8rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }}
-                  onClick={() => { setEditingCheck(cIdx); setEditCheckName(c.name); }}
+                  onClick={() => {
+                  setEditingCheck(cIdx);
+                  setEditCheckName(c.name);
+                  setTimeout(() => editInputRef.current && editInputRef.current.focus(), 0);
+                }}
                   title="Редактировать название"
                 >
                   ✎
