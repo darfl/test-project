@@ -38,6 +38,7 @@ export default function App() {
   const [activeEventId, setActiveEventId] = useState(null);
   const [screen, setScreen] = useState(SCREENS.CREATE);
   const [error, setError] = useState('');
+  const [sidebarWidth, setSidebarWidth] = useState(240);
 
   useEffect(() => {
     saveEvents(events);
@@ -196,7 +197,7 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      <aside className="sidebar" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
           <div className="sidebar-header">
             <h3>📋 События</h3>
             <button className="btn btn-add btn-new-event" onClick={handleNewCompany}>
@@ -243,6 +244,27 @@ export default function App() {
               );
             })}
           </ul>
+        <div
+          className="sidebar-resize-handle"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startWidth = sidebarWidth;
+            const onMouseMove = (ev) => {
+              const delta = ev.clientX - startX;
+              const newWidth = Math.min(500, Math.max(240, startWidth + delta));
+              setSidebarWidth(newWidth);
+            };
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          }}
+        >
+          <span className="resize-handle-icon">⟷</span>
+        </div>
       </aside>
 
       <main className="main-content">
