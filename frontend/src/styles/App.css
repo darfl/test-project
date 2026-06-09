@@ -163,7 +163,7 @@ body {
   max-width: calc(860px + 1cm);
   margin: 0 auto;
   padding: 36px 28px;
-  transform: translateX(-1.5cm);
+  padding-left: calc(28px + 1.5cm);
 }
 
 .app-header {
@@ -349,7 +349,8 @@ body {
   flex-shrink: 0;
 }
 
-.btn-delete:hover {
+.btn-delete:hover,
+.btn-remove-check:hover {
   color: var(--danger);
   background: var(--danger-light);
 }
