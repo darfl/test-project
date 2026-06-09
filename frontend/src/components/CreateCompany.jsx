@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
+export default function CreateCompany({ onNext, prefill, onTitleChange, onBackToOrders }) {
   const [title, setTitle] = useState('');
   const [participants, setParticipants] = useState([
     { name: '' },
@@ -75,7 +75,10 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
           type="text"
           placeholder="Например: Ужин у Ильи"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            if (onTitleChange) onTitleChange(e.target.value);
+          }}
         />
       </div>
 

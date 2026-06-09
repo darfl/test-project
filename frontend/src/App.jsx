@@ -39,6 +39,7 @@ export default function App() {
   const [screen, setScreen] = useState(SCREENS.CREATE);
   const [error, setError] = useState('');
   const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [draftEventId, setDraftEventId] = useState(null);
 
   useEffect(() => {
     saveEvents(events);
@@ -98,9 +99,7 @@ export default function App() {
         return [newEvent, ...prev];
       }
     });
-    if (!existingId) {
-      setActiveEventId(null);
-    }
+    setDraftEventId(null);
     setError('');
     setScreen(SCREENS.ORDERS);
   }, []);
@@ -108,6 +107,7 @@ export default function App() {
   useEffect(() => {
     if (screen === SCREENS.ORDERS && !activeEventId && events.length > 0) {
       setActiveEventId(events[0].id);
+      setDraftEventId(null);
     }
   }, [screen, events, activeEventId]);
 
@@ -143,13 +143,31 @@ export default function App() {
   }, []);
 
   const handleNewCompany = useCallback(() => {
-    setActiveEventId(null);
+    const draftId = generateId();
+    const draft = {
+      id: draftId,
+      title: 'Новое событие',
+      participants: [{ name: 'Участник 1' }, { name: 'Участник 2' }],
+      checks: [],
+      splitRequest: null,
+      result: null,
+      paidDebtors: [],
+    };
+    setEvents((prev) => [draft, ...prev]);
+    setDraftEventId(draftId);
     setScreen(SCREENS.CREATE);
     setError('');
   }, []);
 
+  const handleTitleChange = useCallback((title) => {
+    const targetId = draftEventId || activeEventId;
+    if (!targetId) return;
+    updateEvent(targetId, { title: title || 'Новое событие' });
+  }, [activeEventId, draftEventId, updateEvent]);
+
   const handleSelectEvent = useCallback((event) => {
     setActiveEventId(event.id);
+    setDraftEventId(null);
     setError('');
     if (event.result && event.splitRequest) {
       setScreen(SCREENS.RESULT);
@@ -165,7 +183,10 @@ export default function App() {
       setScreen(SCREENS.CREATE);
       setError('');
     }
-  }, [activeEventId]);
+    if (draftEventId === id) {
+      setDraftEventId(null);
+    }
+  }, [activeEventId, draftEventId]);
 
   const isEventFullyPaid = useCallback((event) => {
     if (!event.result || !event.splitRequest) return false;
@@ -175,7 +196,8 @@ export default function App() {
     return debts.every((d) => paid.includes(d.debtor));
   }, []);
 
-  const prefillData = screen === SCREENS.CREATE && activeEvent
+  const isNewDraft = !!(draftEventId && screen === SCREENS.CREATE);
+  const prefillData = screen === SCREENS.CREATE && activeEvent && !isNewDraft
     ? {
         id: activeEvent.id,
         title: activeEvent.title,
@@ -308,6 +330,7 @@ export default function App() {
           <CreateCompany
             onNext={handleCreate}
             prefill={prefillData}
+            onTitleChange={handleTitleChange}
             onNewCompany={handleNewCompany}
             onBackToOrders={handleBackToOrdersFromCreate}
             events={events}
