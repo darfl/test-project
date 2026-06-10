@@ -353,6 +353,7 @@ export default function App() {
           <CreateCompany
             onNext={handleCreate}
             prefill={prefillData}
+            draftId={draftEventId}
             onTitleChange={handleTitleChange}
             onNewCompany={handleNewCompany}
             onBackToOrders={handleBackToOrdersFromCreate}
