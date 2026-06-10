@@ -25,7 +25,7 @@ export default function CreateCompany({ onNext, prefill, draftId, onTitleChange,
 
   const MAX_PARTICIPANTS = 8;
 
-  const isEditing = !!prefill;
+  const isEditing = !!(prefill && prefill.participants);
 
   const hasChanges = isEditing
     ? title !== (prefill.title || '') ||

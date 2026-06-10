@@ -75,8 +75,10 @@ export default function App() {
   }, [activeEventId]);
 
   const handleCreate = useCallback((data, existingId) => {
+    setDraftEventId(null);
     setEvents((prev) => {
       if (existingId) {
+        // Saving draft → keep its title, update participants
         const oldEvent = prev.find((e) => e.id === existingId);
         const merged = data.participants.map((p) => {
           const old = (oldEvent && oldEvent.participants)
@@ -86,9 +88,12 @@ export default function App() {
         });
         const oldChecks = oldEvent ? (oldEvent.checks || []) : [];
         const idx = prev.findIndex((e) => e.id === existingId);
+        const finalTitle = (data.title === 'Новое событие' && oldEvent?.title)
+          ? oldEvent.title
+          : data.title;
         const next = prev.map((e) =>
           e.id === existingId
-            ? { ...e, title: data.title, participants: merged, checks: oldChecks, splitRequest: null, result: null }
+            ? { ...e, title: finalTitle, participants: merged, checks: oldChecks, splitRequest: null, result: null }
             : e
         );
         if (idx > 0) {
@@ -97,6 +102,7 @@ export default function App() {
         }
         return next;
       } else {
+        // New event (without draft) → generate unique title
         const uniqueTitle = data.title === 'Новое событие' ? getUniqueDraftTitle(prev) : data.title;
         const newId = generateId();
         const newEvent = {
@@ -108,12 +114,10 @@ export default function App() {
           result: null,
           paidDebtors: [],
         };
-        // Установить активным новое событие после рендера
         setTimeout(() => setActiveEventId(newId), 0);
         return [newEvent, ...prev];
       }
     });
-    setDraftEventId(null);
     setError('');
     setScreen(SCREENS.ORDERS);
   }, []);
@@ -184,7 +188,6 @@ export default function App() {
 
   const handleSelectEvent = useCallback((event) => {
       if (draftEventId === event.id) {
-        // Clicking on the draft — stay on creation screen
         setActiveEventId(event.id);
         setScreen(SCREENS.CREATE);
       } else {
@@ -197,7 +200,7 @@ export default function App() {
           setScreen(SCREENS.ORDERS);
         }
       }
-  }, []);
+  }, [draftEventId]);
 
   const handleDeleteEvent = useCallback((id) => {
     setEvents((prev) => prev.filter((e) => e.id !== id));
@@ -220,12 +223,14 @@ export default function App() {
   }, []);
 
   const isNewDraft = !!(draftEventId && screen === SCREENS.CREATE);
-  const prefillData = screen === SCREENS.CREATE && activeEvent && !isNewDraft
-    ? {
-        id: activeEvent.id,
-        title: activeEvent.title,
-        participants: activeEvent.participants,
-      }
+  const prefillData = screen === SCREENS.CREATE && activeEvent
+    ? isNewDraft
+      ? { title: activeEvent.title } // для черновика только название, чтобы форма была в режиме создания
+      : {
+          id: activeEvent.id,
+          title: activeEvent.title,
+          participants: activeEvent.participants,
+        }
     : null;
 
   const orderCompanyData = activeEvent
