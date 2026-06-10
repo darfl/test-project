@@ -38,6 +38,8 @@ export default function App() {
   const [activeEventId, setActiveEventId] = useState(null);
   const [screen, setScreen] = useState(SCREENS.CREATE);
   const [error, setError] = useState('');
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [draftEventId, setDraftEventId] = useState(null);
 
   useEffect(() => {
     saveEvents(events);
@@ -97,9 +99,7 @@ export default function App() {
         return [newEvent, ...prev];
       }
     });
-    if (!existingId) {
-      setActiveEventId(null);
-    }
+    setDraftEventId(null);
     setError('');
     setScreen(SCREENS.ORDERS);
   }, []);
@@ -107,6 +107,7 @@ export default function App() {
   useEffect(() => {
     if (screen === SCREENS.ORDERS && !activeEventId && events.length > 0) {
       setActiveEventId(events[0].id);
+      setDraftEventId(null);
     }
   }, [screen, events, activeEventId]);
 
@@ -142,19 +143,44 @@ export default function App() {
   }, []);
 
   const handleNewCompany = useCallback(() => {
-    setActiveEventId(null);
+    const draftId = generateId();
+    const draft = {
+      id: draftId,
+      title: 'Новое событие',
+      participants: [{ name: 'Участник 1' }, { name: 'Участник 2' }],
+      checks: [],
+      splitRequest: null,
+      result: null,
+      paidDebtors: [],
+    };
+    setEvents((prev) => [draft, ...prev]);
+    setActiveEventId(draftId);
+    setDraftEventId(draftId);
     setScreen(SCREENS.CREATE);
     setError('');
   }, []);
 
+  const handleTitleChange = useCallback((title) => {
+    const targetId = draftEventId || activeEventId;
+    if (!targetId) return;
+    updateEvent(targetId, { title: title || 'Новое событие' });
+  }, [activeEventId, draftEventId, updateEvent]);
+
   const handleSelectEvent = useCallback((event) => {
-    setActiveEventId(event.id);
-    setError('');
-    if (event.result && event.splitRequest) {
-      setScreen(SCREENS.RESULT);
-    } else {
-      setScreen(SCREENS.ORDERS);
-    }
+      if (draftEventId === event.id) {
+        // Clicking on the draft — stay on creation screen
+        setActiveEventId(event.id);
+        setScreen(SCREENS.CREATE);
+      } else {
+        setActiveEventId(event.id);
+        setDraftEventId(null);
+        setError('');
+        if (event.result && event.splitRequest) {
+          setScreen(SCREENS.RESULT);
+        } else {
+          setScreen(SCREENS.ORDERS);
+        }
+      }
   }, []);
 
   const handleDeleteEvent = useCallback((id) => {
@@ -164,7 +190,10 @@ export default function App() {
       setScreen(SCREENS.CREATE);
       setError('');
     }
-  }, [activeEventId]);
+    if (draftEventId === id) {
+      setDraftEventId(null);
+    }
+  }, [activeEventId, draftEventId]);
 
   const isEventFullyPaid = useCallback((event) => {
     if (!event.result || !event.splitRequest) return false;
@@ -174,7 +203,8 @@ export default function App() {
     return debts.every((d) => paid.includes(d.debtor));
   }, []);
 
-  const prefillData = screen === SCREENS.CREATE && activeEvent
+  const isNewDraft = !!(draftEventId && screen === SCREENS.CREATE);
+  const prefillData = screen === SCREENS.CREATE && activeEvent && !isNewDraft
     ? {
         id: activeEvent.id,
         title: activeEvent.title,
@@ -194,12 +224,9 @@ export default function App() {
   const splitRequest = activeEvent?.splitRequest || null;
   const paidDebtors = activeEvent?.paidDebtors || [];
 
-  const showSidebar = screen === SCREENS.CREATE;
-
   return (
-    <div className={`app-layout ${showSidebar ? '' : 'no-sidebar'}`}>
-      {showSidebar && (
-        <aside className="sidebar">
+    <div className="app-layout">
+      <aside className="sidebar" style={{ width: sidebarWidth, minWidth: sidebarWidth }}>
           <div className="sidebar-header">
             <h3>📋 События</h3>
             <button className="btn btn-add btn-new-event" onClick={handleNewCompany}>
@@ -246,8 +273,28 @@ export default function App() {
               );
             })}
           </ul>
-        </aside>
-      )}
+        <div
+          className="sidebar-resize-handle"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            const startX = e.clientX;
+            const startWidth = sidebarWidth;
+            const onMouseMove = (ev) => {
+              const delta = ev.clientX - startX;
+              const newWidth = Math.min(500, Math.max(240, startWidth + delta));
+              setSidebarWidth(newWidth);
+            };
+            const onMouseUp = () => {
+              document.removeEventListener('mousemove', onMouseMove);
+              document.removeEventListener('mouseup', onMouseUp);
+            };
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          }}
+        >
+          <span className="resize-handle-icon">⟷</span>
+        </div>
+      </aside>
 
       <main className="main-content">
         <header className="app-header">
@@ -257,10 +304,40 @@ export default function App() {
 
         {error && <div className="error-message">{error}</div>}
 
+        <nav className="breadcrumbs">
+          <span
+            className={`breadcrumb-item ${screen === SCREENS.CREATE ? 'active' : ''}`}
+            onClick={() => { setError(''); setScreen(SCREENS.CREATE); }}
+          >
+            Компания
+          </span>
+          <span className="breadcrumb-sep">›</span>
+          <span
+            className={`breadcrumb-item ${screen === SCREENS.ORDERS ? 'active' : ''}`}
+            onClick={() => {
+              if (activeEventId) { setError(''); setScreen(SCREENS.ORDERS); }
+            }}
+            style={!activeEventId ? { opacity: 0.4, cursor: 'default' } : {}}
+          >
+            Расходы
+          </span>
+          <span className="breadcrumb-sep">›</span>
+          <span
+            className={`breadcrumb-item ${screen === SCREENS.RESULT ? 'active' : ''}`}
+            onClick={() => {
+              if (activeEventId && activeEvent?.result) { setError(''); setScreen(SCREENS.RESULT); }
+            }}
+            style={!activeEvent?.result ? { opacity: 0.4, cursor: 'default' } : {}}
+          >
+            Результаты
+          </span>
+        </nav>
+
         {screen === SCREENS.CREATE && (
           <CreateCompany
             onNext={handleCreate}
             prefill={prefillData}
+            onTitleChange={handleTitleChange}
             onNewCompany={handleNewCompany}
             onBackToOrders={handleBackToOrdersFromCreate}
             events={events}

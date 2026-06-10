@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
+export default function CreateCompany({ onNext, prefill, onTitleChange, onBackToOrders }) {
   const [title, setTitle] = useState('');
   const [participants, setParticipants] = useState([
     { name: '' },
     { name: '' },
   ]);
+  const [editingParticipant, setEditingParticipant] = useState(null);
+  const [editParticipantName, setEditParticipantName] = useState('');
+  const editInputRef = useRef(null);
 
   useEffect(() => {
     if (prefill) {
@@ -75,34 +78,89 @@ export default function CreateCompany({ onNext, prefill, onBackToOrders }) {
           type="text"
           placeholder="Например: Ужин у Ильи"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            if (onTitleChange) onTitleChange(e.target.value);
+          }}
         />
       </div>
 
       <div className="form-group">
         <label>Участники</label>
         <div className="participants-list">
-          {participants.map((p, i) => (
-            <div className="participant-row" key={i}>
-              <input
-                className="name-input"
-                type="text"
-                value={p.name}
-                onChange={(e) => handleNameChange(i, e.target.value)}
-                placeholder={`Участник ${i + 1}`}
-              />
-              {participants.length > 2 && (
-                <button
-                  type="button"
-                  className="btn-delete"
-                  onClick={() => handleRemoveParticipant(i)}
-                  title="Удалить участника"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          ))}
+          {participants.map((p, i) => {
+            const displayName = p.name || `Участник ${i + 1}`;
+            const isEditingThis = editingParticipant === i;
+            return (
+              <div className="participant-row" key={i}>
+                {isEditingThis ? (
+                  <>
+                    <input
+                      ref={editInputRef}
+                      className="name-input"
+                      type="text"
+                      value={editParticipantName}
+                      onChange={(e) => setEditParticipantName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === 'Escape') {
+                          handleNameChange(i, editParticipantName || `Участник ${i + 1}`);
+                          setEditingParticipant(null);
+                        }
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.78rem', padding: '4px 8px', minWidth: 'auto' }}
+                      onClick={() => setEditingParticipant(null)}
+                      title="Отменить редактирование"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      style={{ fontSize: '0.78rem', padding: '4px 10px', minWidth: 'auto' }}
+                      onClick={() => {
+                        handleNameChange(i, editParticipantName || `Участник ${i + 1}`);
+                        setEditingParticipant(null);
+                      }}
+                    >
+                      ✓
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="participant-name-text">{displayName}</span>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      style={{ fontSize: '0.78rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }}
+                      onClick={() => {
+                        setEditingParticipant(i);
+                        setEditParticipantName(p.name);
+                        setTimeout(() => editInputRef.current && editInputRef.current.focus(), 0);
+                      }}
+                      title="Редактировать имя"
+                    >
+                      ✎
+                    </button>
+                  </>
+                )}
+                {participants.length > 2 && (
+                  <button
+                    type="button"
+                    className="btn-delete"
+                    onClick={() => handleRemoveParticipant(i)}
+                    title="Удалить участника"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
         <button
           type="button"

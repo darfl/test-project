@@ -49,7 +49,7 @@ export default function ResultTable({ result, companyData, participants, paidDeb
               return (
                 <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between' }}>
                   <span style={isPaid ? { textDecoration: 'line-through', opacity: 0.45 } : {}}>
-                    {debt.debtor} переводит {debt.creditor} — {debt.amount.toFixed(2)} ₽
+                    <strong>{debt.debtor}</strong> переводит <strong>{debt.creditor}</strong> — {debt.amount.toFixed(2)} ₽
                   </span>
                   <label className="paid-checkbox" style={{ fontSize: '0.8rem' }}>
                     <input
@@ -68,7 +68,7 @@ export default function ResultTable({ result, companyData, participants, paidDeb
 
       <div className="action-buttons">
         <button className="btn btn-secondary" onClick={onBack}>
-          ← Вернуться к заказам
+          ← Вернуться к расходам
         </button>
         <button className="btn btn-copy" onClick={handleCopyReminder}>
           📋 Скопировать напоминалку

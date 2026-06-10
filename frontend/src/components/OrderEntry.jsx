@@ -166,6 +166,14 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                   }}
                 />
                 <button
+                  className="btn btn-secondary"
+                  style={{ fontSize: '0.8rem', padding: '6px 10px', minWidth: 'auto' }}
+                  onClick={() => setEditingCheck(null)}
+                  title="Отменить редактирование"
+                >
+                  ✕
+                </button>
+                <button
                   className="btn btn-primary"
                   style={{ fontSize: '0.8rem', padding: '6px 14px' }}
                   onClick={() => { handleCheckNameChange(cIdx, editCheckName); setEditingCheck(null); }}
@@ -190,8 +198,8 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                 </button>
               </div>
             )}
-            {checks.length > 1 && (
-              <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }} onClick={() => handleRemoveCheck(cIdx)} title="Удалить чек">✕</button>
+            {checks.length > 1 && editingCheck !== cIdx && (
+              <button className="btn btn-secondary btn-remove-check" style={{ fontSize: '0.8rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }} onClick={() => handleRemoveCheck(cIdx)} title="Удалить чек">✕</button>
             )}
           </div>
 
