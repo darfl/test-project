@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-export default function CreateCompany({ onNext, prefill, onTitleChange, onBackToOrders }) {
+export default function CreateCompany({ onNext, prefill, draftId, onTitleChange, onBackToOrders }) {
   const [title, setTitle] = useState('');
   const [participants, setParticipants] = useState([
     { name: '' },
@@ -61,10 +61,10 @@ export default function CreateCompany({ onNext, prefill, onTitleChange, onBackTo
 
     onNext(
       {
-        title: title.trim() || 'Ужин',
+        title: title.trim() || 'Новое событие',
         participants: names.map((name) => ({ name, items: [], contribution: 0 })),
       },
-      prefill?.id || null
+      prefill?.id || draftId || null
     );
   };
 
@@ -93,62 +93,77 @@ export default function CreateCompany({ onNext, prefill, onTitleChange, onBackTo
             const isEditingThis = editingParticipant === i;
             return (
               <div className="participant-row" key={i}>
-                {isEditingThis ? (
-                  <>
-                    <input
-                      ref={editInputRef}
-                      className="name-input"
-                      type="text"
-                      value={editParticipantName}
-                      onChange={(e) => setEditParticipantName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === 'Escape') {
+                {isEditing ? (
+                  // Editing mode: span + pencil
+                  isEditingThis ? (
+                    <>
+                      <input
+                        ref={editInputRef}
+                        className="name-input"
+                        type="text"
+                        value={editParticipantName}
+                        onChange={(e) => setEditParticipantName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === 'Escape') {
+                            handleNameChange(i, editParticipantName || `Участник ${i + 1}`);
+                            setEditingParticipant(null);
+                          }
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ fontSize: '0.78rem', padding: '4px 8px', minWidth: 'auto' }}
+                        onClick={() => setEditingParticipant(null)}
+                        title="Отменить редактирование"
+                      >
+                        ✕
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ fontSize: '0.78rem', padding: '4px 10px', minWidth: 'auto' }}
+                        disabled={editParticipantName === p.name}
+                        onClick={() => {
                           handleNameChange(i, editParticipantName || `Участник ${i + 1}`);
                           setEditingParticipant(null);
-                        }
-                      }}
-                      style={{ flex: 1 }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.78rem', padding: '4px 8px', minWidth: 'auto' }}
-                      onClick={() => setEditingParticipant(null)}
-                      title="Отменить редактирование"
-                    >
-                      ✕
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-primary"
-                      style={{ fontSize: '0.78rem', padding: '4px 10px', minWidth: 'auto' }}
-                      onClick={() => {
-                        handleNameChange(i, editParticipantName || `Участник ${i + 1}`);
-                        setEditingParticipant(null);
-                      }}
-                    >
-                      ✓
-                    </button>
-                  </>
+                        }}
+                      >
+                        ✓
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`participant-name-text ${!p.name ? 'placeholder' : ''}`}>
+                        {displayName}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-edit-participant"
+                        style={{ fontSize: '0.78rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }}
+                        onClick={() => {
+                          setEditingParticipant(i);
+                          setEditParticipantName(p.name);
+                          setTimeout(() => editInputRef.current && editInputRef.current.focus(), 0);
+                        }}
+                        title="Редактировать имя"
+                      >
+                        ✎
+                      </button>
+                    </>
+                  )
                 ) : (
-                  <>
-                    <span className="participant-name-text">{displayName}</span>
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      style={{ fontSize: '0.78rem', padding: '3px 7px', minWidth: 'auto', lineHeight: 1 }}
-                      onClick={() => {
-                        setEditingParticipant(i);
-                        setEditParticipantName(p.name);
-                        setTimeout(() => editInputRef.current && editInputRef.current.focus(), 0);
-                      }}
-                      title="Редактировать имя"
-                    >
-                      ✎
-                    </button>
-                  </>
+                  // Create mode: simple text input
+                  <input
+                    className="participant-input"
+                    type="text"
+                    value={p.name}
+                    onChange={(e) => handleNameChange(i, e.target.value)}
+                    placeholder={`Участник ${i + 1}`}
+                  />
                 )}
-                {participants.length > 2 && (
+                {participants.length > 2 && editingParticipant !== i && (
                   <button
                     type="button"
                     className="btn-delete"
@@ -175,12 +190,14 @@ export default function CreateCompany({ onNext, prefill, onTitleChange, onBackTo
       </div>
 
       <div className="bottom-actions">
-        <button type="submit" className="btn btn-primary" disabled={isEditing && !hasChanges}>
-          {isEditing ? 'Сохранить изменения и перейти к заказам' : 'Создать компанию'}
-        </button>
+        {!isEditing && (
+          <button type="submit" className="btn btn-primary">
+            Создать компанию
+          </button>
+        )}
         {isEditing && onBackToOrders && (
           <button type="button" className="btn btn-secondary" onClick={onBackToOrders}>
-            Вернуться к заказам →
+            Вернуться к расходам →
           </button>
         )}
       </div>

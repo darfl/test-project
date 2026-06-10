@@ -176,6 +176,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                 <button
                   className="btn btn-primary"
                   style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                  disabled={editCheckName === c.name}
                   onClick={() => { handleCheckNameChange(cIdx, editCheckName); setEditingCheck(null); }}
                 >
                   ✓

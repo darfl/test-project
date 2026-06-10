@@ -432,6 +432,53 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.create-company .participant-row {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.create-company .participant-row:hover {
+  background: transparent;
+  box-shadow: none;
+}
+
+.create-company .participant-row > .btn-delete {
+  position: static;
+  opacity: 1;
+  font-size: 0.78rem;
+  padding: 3px 6px;
+}
+
+.participant-name-text {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  flex: 1;
+  padding: 8px 12px;
+}
+
+.participant-name-text.placeholder {
+  color: var(--text-muted);
+}
+
+.participant-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 16px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  outline: none;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.participant-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(51,111,238,0.12);
+}
+
 .participant-row .name-input {
   flex: 1;
   min-width: 90px;

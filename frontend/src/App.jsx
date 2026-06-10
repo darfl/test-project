@@ -6,6 +6,16 @@ import { calculateSplit } from './services/api';
 
 const STORAGE_KEY = 'fair-split-events';
 
+function getUniqueDraftTitle(events) {
+  const base = 'Новое событие';
+  const used = new Set(events.map((e) => e.title));
+  if (!used.has(base)) return base;
+  for (let i = 1; ; i++) {
+    const candidate = `${base} (${i})`;
+    if (!used.has(candidate)) return candidate;
+  }
+}
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
@@ -38,7 +48,7 @@ export default function App() {
   const [activeEventId, setActiveEventId] = useState(null);
   const [screen, setScreen] = useState(SCREENS.CREATE);
   const [error, setError] = useState('');
-  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [sidebarWidth, setSidebarWidth] = useState(260);
   const [draftEventId, setDraftEventId] = useState(null);
 
   useEffect(() => {
@@ -87,15 +97,19 @@ export default function App() {
         }
         return next;
       } else {
+        const uniqueTitle = data.title === 'Новое событие' ? getUniqueDraftTitle(prev) : data.title;
+        const newId = generateId();
         const newEvent = {
-          id: generateId(),
-          title: data.title,
+          id: newId,
+          title: uniqueTitle,
           participants: data.participants.map((p) => ({ ...p })),
           checks: [],
           splitRequest: null,
           result: null,
           paidDebtors: [],
         };
+        // Установить активным новое событие после рендера
+        setTimeout(() => setActiveEventId(newId), 0);
         return [newEvent, ...prev];
       }
     });
@@ -144,16 +158,18 @@ export default function App() {
 
   const handleNewCompany = useCallback(() => {
     const draftId = generateId();
-    const draft = {
-      id: draftId,
-      title: 'Новое событие',
-      participants: [{ name: 'Участник 1' }, { name: 'Участник 2' }],
-      checks: [],
-      splitRequest: null,
-      result: null,
-      paidDebtors: [],
-    };
-    setEvents((prev) => [draft, ...prev]);
+    setEvents((prev) => {
+      const draft = {
+        id: draftId,
+        title: getUniqueDraftTitle(prev),
+        participants: [{ name: 'Участник 1' }, { name: 'Участник 2' }],
+        checks: [],
+        splitRequest: null,
+        result: null,
+        paidDebtors: [],
+      };
+      return [draft, ...prev];
+    });
     setActiveEventId(draftId);
     setDraftEventId(draftId);
     setScreen(SCREENS.CREATE);
@@ -163,7 +179,7 @@ export default function App() {
   const handleTitleChange = useCallback((title) => {
     const targetId = draftEventId || activeEventId;
     if (!targetId) return;
-    updateEvent(targetId, { title: title || 'Новое событие' });
+    updateEvent(targetId, { title: title || '' });
   }, [activeEventId, draftEventId, updateEvent]);
 
   const handleSelectEvent = useCallback((event) => {
@@ -250,7 +266,7 @@ export default function App() {
                     title={`Открыть "${event.title}"`}
                   >
                     <span className="sidebar-item-title">
-                      {event.title}
+                      {event.title || '...'}
                       {fullyPaid && (
                         <span style={{ marginLeft: '8px', color: '#4ade80', fontSize: '0.85rem' }}>✅</span>
                       )}
@@ -281,7 +297,7 @@ export default function App() {
             const startWidth = sidebarWidth;
             const onMouseMove = (ev) => {
               const delta = ev.clientX - startX;
-              const newWidth = Math.min(500, Math.max(240, startWidth + delta));
+              const newWidth = Math.min(500, Math.max(260, startWidth + delta));
               setSidebarWidth(newWidth);
             };
             const onMouseUp = () => {
@@ -337,6 +353,7 @@ export default function App() {
           <CreateCompany
             onNext={handleCreate}
             prefill={prefillData}
+            draftId={draftEventId}
             onTitleChange={handleTitleChange}
             onNewCompany={handleNewCompany}
             onBackToOrders={handleBackToOrdersFromCreate}
