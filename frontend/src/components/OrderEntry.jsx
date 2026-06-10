@@ -129,7 +129,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
       });
       const requestData = {
         organizerName: sharedItems.length > 0 ? sharedItems[0].paidBy : '',
-        participants: participants.map((p) => ({ name: p.name || '', items: [], contribution: 0 })),
+        participants: [], // не используется бэкендом
         sharedItems,
       };
       onSplit(requestData);

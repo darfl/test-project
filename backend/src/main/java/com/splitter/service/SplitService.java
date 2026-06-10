@@ -15,7 +15,7 @@ public class SplitService {
 
         int n = participants.size();
         if (n == 0) {
-            return new SplitResponse(0, 0, List.of(), List.of());
+            return new SplitResponse(0, 0, List.of());
         }
 
         List<String> names = new ArrayList<>();
@@ -170,17 +170,6 @@ public class SplitService {
             else negatives.set(ni, new AbstractMap.SimpleEntry<>(creditor.getKey(), newC));
         }
 
-        // Pressure data
-        List<PressureDto> pressureData = new ArrayList<>();
-        for (int i = 0; i < participants.size(); i++) {
-            String name = names.get(i);
-            double ob = balance.getOrDefault(name, 0.0);
-            double dev = average > 0 ? Math.round(((ob - average) / average) * 100.0) : 0;
-            int d = (int) dev;
-            String level = d > 70 ? "HIGH" : d > 30 ? "MEDIUM" : "LOW";
-            pressureData.add(new PressureDto(name, d, level));
-        }
-
-        return new SplitResponse(roundedAverage, Math.round(total * 100.0) / 100.0, debts, pressureData);
+        return new SplitResponse(roundedAverage, Math.round(total * 100.0) / 100.0, debts);
     }
 }

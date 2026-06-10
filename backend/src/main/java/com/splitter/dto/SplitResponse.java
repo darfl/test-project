@@ -6,15 +6,13 @@ public class SplitResponse {
     private double average;
     private double total;
     private List<DebtDto> debts;
-    private List<PressureDto> pressureData;
 
     public SplitResponse() {}
 
-    public SplitResponse(double average, double total, List<DebtDto> debts, List<PressureDto> pressureData) {
+    public SplitResponse(double average, double total, List<DebtDto> debts) {
         this.average = average;
         this.total = total;
         this.debts = debts;
-        this.pressureData = pressureData;
     }
 
     public double getAverage() { return average; }
@@ -25,7 +23,4 @@ public class SplitResponse {
 
     public List<DebtDto> getDebts() { return debts; }
     public void setDebts(List<DebtDto> debts) { this.debts = debts; }
-
-    public List<PressureDto> getPressureData() { return pressureData; }
-    public void setPressureData(List<PressureDto> pressureData) { this.pressureData = pressureData; }
 }
