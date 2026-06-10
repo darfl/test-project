@@ -97,15 +97,19 @@ export default function App() {
         }
         return next;
       } else {
+        const uniqueTitle = data.title === 'Новое событие' ? getUniqueDraftTitle(prev) : data.title;
+        const newId = generateId();
         const newEvent = {
-          id: generateId(),
-          title: data.title,
+          id: newId,
+          title: uniqueTitle,
           participants: data.participants.map((p) => ({ ...p })),
           checks: [],
           splitRequest: null,
           result: null,
           paidDebtors: [],
         };
+        // Установить активным новое событие после рендера
+        setTimeout(() => setActiveEventId(newId), 0);
         return [newEvent, ...prev];
       }
     });
