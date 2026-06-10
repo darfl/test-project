@@ -48,7 +48,7 @@ export default function App() {
   const [activeEventId, setActiveEventId] = useState(null);
   const [screen, setScreen] = useState(SCREENS.CREATE);
   const [error, setError] = useState('');
-  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [sidebarWidth, setSidebarWidth] = useState(260);
   const [draftEventId, setDraftEventId] = useState(null);
 
   useEffect(() => {
@@ -179,7 +179,7 @@ export default function App() {
   const handleTitleChange = useCallback((title) => {
     const targetId = draftEventId || activeEventId;
     if (!targetId) return;
-    updateEvent(targetId, { title: title || 'Новое событие' });
+    updateEvent(targetId, { title: title || '' });
   }, [activeEventId, draftEventId, updateEvent]);
 
   const handleSelectEvent = useCallback((event) => {
@@ -266,7 +266,7 @@ export default function App() {
                     title={`Открыть "${event.title}"`}
                   >
                     <span className="sidebar-item-title">
-                      {event.title}
+                      {event.title || '...'}
                       {fullyPaid && (
                         <span style={{ marginLeft: '8px', color: '#4ade80', fontSize: '0.85rem' }}>✅</span>
                       )}
@@ -297,7 +297,7 @@ export default function App() {
             const startWidth = sidebarWidth;
             const onMouseMove = (ev) => {
               const delta = ev.clientX - startX;
-              const newWidth = Math.min(500, Math.max(240, startWidth + delta));
+              const newWidth = Math.min(500, Math.max(260, startWidth + delta));
               setSidebarWidth(newWidth);
             };
             const onMouseUp = () => {
