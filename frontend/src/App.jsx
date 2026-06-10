@@ -6,6 +6,16 @@ import { calculateSplit } from './services/api';
 
 const STORAGE_KEY = 'fair-split-events';
 
+function getUniqueDraftTitle(events) {
+  const base = 'Новое событие';
+  const used = new Set(events.map((e) => e.title));
+  if (!used.has(base)) return base;
+  for (let i = 1; ; i++) {
+    const candidate = `${base} (${i})`;
+    if (!used.has(candidate)) return candidate;
+  }
+}
+
 function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
@@ -144,16 +154,18 @@ export default function App() {
 
   const handleNewCompany = useCallback(() => {
     const draftId = generateId();
-    const draft = {
-      id: draftId,
-      title: 'Новое событие',
-      participants: [{ name: 'Участник 1' }, { name: 'Участник 2' }],
-      checks: [],
-      splitRequest: null,
-      result: null,
-      paidDebtors: [],
-    };
-    setEvents((prev) => [draft, ...prev]);
+    setEvents((prev) => {
+      const draft = {
+        id: draftId,
+        title: getUniqueDraftTitle(prev),
+        participants: [{ name: 'Участник 1' }, { name: 'Участник 2' }],
+        checks: [],
+        splitRequest: null,
+        result: null,
+        paidDebtors: [],
+      };
+      return [draft, ...prev];
+    });
     setActiveEventId(draftId);
     setDraftEventId(draftId);
     setScreen(SCREENS.CREATE);

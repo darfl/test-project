@@ -61,7 +61,7 @@ export default function CreateCompany({ onNext, prefill, onTitleChange, onBackTo
 
     onNext(
       {
-        title: title.trim() || 'Ужин',
+        title: title.trim() || 'Новое событие',
         participants: names.map((name) => ({ name, items: [], contribution: 0 })),
       },
       prefill?.id || null
