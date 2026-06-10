@@ -167,14 +167,20 @@ export default function App() {
   }, [activeEventId, draftEventId, updateEvent]);
 
   const handleSelectEvent = useCallback((event) => {
-    setActiveEventId(event.id);
-    setDraftEventId(null);
-    setError('');
-    if (event.result && event.splitRequest) {
-      setScreen(SCREENS.RESULT);
-    } else {
-      setScreen(SCREENS.ORDERS);
-    }
+      if (draftEventId === event.id) {
+        // Clicking on the draft — stay on creation screen
+        setActiveEventId(event.id);
+        setScreen(SCREENS.CREATE);
+      } else {
+        setActiveEventId(event.id);
+        setDraftEventId(null);
+        setError('');
+        if (event.result && event.splitRequest) {
+          setScreen(SCREENS.RESULT);
+        } else {
+          setScreen(SCREENS.ORDERS);
+        }
+      }
   }, []);
 
   const handleDeleteEvent = useCallback((id) => {
