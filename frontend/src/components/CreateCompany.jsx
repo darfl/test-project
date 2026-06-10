@@ -132,7 +132,9 @@ export default function CreateCompany({ onNext, prefill, onTitleChange, onBackTo
                   </>
                 ) : (
                   <>
-                    <span className="participant-name-text">{displayName}</span>
+                    <span className={`participant-name-text ${!p.name ? 'placeholder' : ''}`}>
+                      {displayName}
+                    </span>
                     <button
                       type="button"
                       className="btn btn-secondary"

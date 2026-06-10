@@ -432,6 +432,22 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+.create-company .participant-row:hover {
+  background: var(--bg-input);
+  box-shadow: none;
+}
+
+.participant-name-text {
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  flex: 1;
+  padding: 8px 12px;
+}
+
+.participant-name-text.placeholder {
+  color: var(--text-muted);
+}
+
 .participant-row .name-input {
   flex: 1;
   min-width: 90px;
