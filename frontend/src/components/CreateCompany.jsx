@@ -124,6 +124,7 @@ export default function CreateCompany({ onNext, prefill, draftId, onTitleChange,
                         type="button"
                         className="btn btn-primary"
                         style={{ fontSize: '0.78rem', padding: '4px 10px', minWidth: 'auto' }}
+                        disabled={editParticipantName === p.name}
                         onClick={() => {
                           handleNameChange(i, editParticipantName || `Участник ${i + 1}`);
                           setEditingParticipant(null);
@@ -162,7 +163,7 @@ export default function CreateCompany({ onNext, prefill, draftId, onTitleChange,
                     placeholder={`Участник ${i + 1}`}
                   />
                 )}
-                {participants.length > 2 && (
+                {participants.length > 2 && editingParticipant !== i && (
                   <button
                     type="button"
                     className="btn-delete"
