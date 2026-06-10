@@ -8,6 +8,7 @@ export default function CreateCompany({ onNext, prefill, draftId, onTitleChange,
   ]);
   const [editingParticipant, setEditingParticipant] = useState(null);
   const [editParticipantName, setEditParticipantName] = useState('');
+  const [confirmDeleteParticipant, setConfirmDeleteParticipant] = useState(null);
   const editInputRef = useRef(null);
 
   useEffect(() => {
@@ -47,11 +48,17 @@ export default function CreateCompany({ onNext, prefill, draftId, onTitleChange,
 
   const handleRemoveParticipant = (index) => {
     if (participants.length <= 2) return;
+    setConfirmDeleteParticipant(index);
+  };
+
+  const confirmRemoveParticipant = () => {
+    if (confirmDeleteParticipant === null) return;
     setParticipants((prev) => {
       const next = [...prev];
-      next.splice(index, 1);
+      next.splice(confirmDeleteParticipant, 1);
       return next;
     });
+    setConfirmDeleteParticipant(null);
   };
 
   const handleSubmit = (e) => {
@@ -188,6 +195,30 @@ export default function CreateCompany({ onNext, prefill, draftId, onTitleChange,
           {participants.length >= MAX_PARTICIPANTS ? ' (макс 8)' : ''}
         </button>
       </div>
+
+      {confirmDeleteParticipant !== null && (
+        <div className="modal-overlay" onClick={() => setConfirmDeleteParticipant(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <p style={{ marginBottom: '20px', fontSize: '1rem', color: 'var(--text-primary)' }}>Удалить участника?</p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setConfirmDeleteParticipant(null)}
+                style={{ fontSize: '0.85rem', padding: '8px 18px' }}
+              >
+                Отмена
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={confirmRemoveParticipant}
+                style={{ fontSize: '0.85rem', padding: '8px 18px', background: 'var(--danger)' }}
+              >
+                🗑️ Удалить
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bottom-actions">
         {!isEditing && (
