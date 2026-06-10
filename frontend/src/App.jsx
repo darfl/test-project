@@ -154,6 +154,7 @@ export default function App() {
       paidDebtors: [],
     };
     setEvents((prev) => [draft, ...prev]);
+    setActiveEventId(draftId);
     setDraftEventId(draftId);
     setScreen(SCREENS.CREATE);
     setError('');
