@@ -9,18 +9,31 @@ import java.util.*;
 public class SplitService {
 
     public SplitResponse calculate(SplitRequest request) {
-        List<ParticipantDto> participants = request.getParticipants();
+        List<ParticipantDto> participants = request.getParticipants() != null ? request.getParticipants() : List.of();
         List<SharedItemDto> sharedItems = request.getSharedItems() != null ? request.getSharedItems() : List.of();
         String organizerName = request.getOrganizerName();
 
-        int n = participants.size();
+        // Collect unique names from participants + sharedItems
+        Set<String> nameSet = new LinkedHashSet<>();
+        for (ParticipantDto p : participants) {
+            if (p.getName() != null && !p.getName().isEmpty()) {
+                nameSet.add(p.getName());
+            }
+        }
+        for (SharedItemDto s : sharedItems) {
+            if (s.getPaidBy() != null && !s.getPaidBy().isEmpty()) {
+                nameSet.add(s.getPaidBy());
+            }
+            if (s.getSharedWith() != null) {
+                for (String n : s.getSharedWith()) {
+                    if (n != null && !n.isEmpty()) nameSet.add(n);
+                }
+            }
+        }
+        List<String> names = new ArrayList<>(nameSet);
+        int n = names.size();
         if (n == 0) {
             return new SplitResponse(0, 0, List.of());
-        }
-
-        List<String> names = new ArrayList<>();
-        for (ParticipantDto p : participants) {
-            names.add(p.getName() != null ? p.getName() : "");
         }
 
         double personalTotal = 0;
