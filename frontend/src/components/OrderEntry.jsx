@@ -35,7 +35,10 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
 
   const grandTotal = useMemo(() => {
     let sum = 0;
-    checks.forEach((c) => (c.items || []).forEach((it) => (sum += parseFloat(it.amount) || 0)));
+    checks.forEach((c) => (c.items || []).forEach((it) => {
+      const val = parseFloat(it.amount);
+      if (!isNaN(val)) sum += val;
+    }));
     return sum;
   }, [checks]);
 
@@ -84,8 +87,8 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
     setChecks((prev) => {
       const next = [...prev];
       const items = [...(next[cIdx].items || [])];
-      const num = value === '' ? 0 : Math.max(0, parseFloat(value) || 0);
-      items[iIdx] = { ...items[iIdx], amount: num };
+      // Храним как строку, чтобы избежать автокоррекции чисел браузером
+      items[iIdx] = { ...items[iIdx], amount: value };
       next[cIdx] = { ...next[cIdx], items };
       return next;
     });
@@ -222,7 +225,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
                     type="number"
                     min="0"
                     onKeyDown={(e) => { if (e.key === '-' || e.key === '+' || e.key === 'e') e.preventDefault(); }}
-                    value={it.amount === 0 ? '' : it.amount}
+                    value={it.amount || ''}
                     onChange={(e) => handleItemAmountChange(cIdx, iIdx, e.target.value)}
                     placeholder="Сумма"
                   />
@@ -257,7 +260,7 @@ export default function OrderEntry({ companyData, onBack, onSplit, eventId, onUp
             );
           })}
 
-          <button className="btn btn-add" onClick={() => handleAddItem(cIdx)}>+ добавить позицию</button>
+                        <button className="btn btn-add" onClick={() => handleAddItem(cIdx)}>+ добавить позицию</button>
         </div>
       ))}
 
